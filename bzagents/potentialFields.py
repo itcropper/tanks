@@ -226,9 +226,9 @@ class Plot():
 		gp.write(self.gnuplot_header(-WORLDSIZE / 4, WORLDSIZE / 4))
 		gp.write(self.draw_obstacles(obstacles))
 		gp.write(self.draw_points(tanks, "tanks"))
-		#for scale in cycle(anim_points):
-		#	field_function = self.generate_field_function(scale)
-		#	gp.write(self.plot_field(field_function))
+		for scale in cycle(anim_points):
+			field_function = self.generate_field_function(scale)
+			gp.write(self.plot_field(field_function))
 
 
 
