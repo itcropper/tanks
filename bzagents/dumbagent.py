@@ -54,8 +54,6 @@ class Agent(object):
 
     def dumb_movement(self, tank, time_diff):
         """Duh! Move for 3-8 seconds, then rotate 60 degrees. Shoot every 2 seconds or so!"""
-        #if tank.index == 0:
-        #    print int(self.tankinfo[tank.index]['TimeMoving']), tank.angle, self.tankinfo[tank.index]['CurAngle']
         self.tankinfo[tank.index]['Fired'] -= time_diff
         self.tankinfo[tank.index]['TimeMoving'] -= time_diff
 
