@@ -61,7 +61,11 @@ class Agent(object):
         """Get a vector and follow it!"""
         angle, magnitude = self.get_vector(tank)
         relative_angle = self.normalize_angle(angle - tank.angle)
-        command = Command(tank.index, magnitude, relative_angle, True)
+        shoot = False
+        for othertank in self.othertanks:
+            if math.sqrt((othertank.x - tank.x)**2 + (othertank.y - tank.y)**2) < 20:
+                shoot = True
+        command = Command(tank.index, magnitude, 2*relative_angle, shoot)
         self.commands.append(command)
 
 #    def get_vector(self, tank):
@@ -110,6 +114,9 @@ class Agent(object):
             avgx /= 4
             avgy /= 4                
             vectors.append(self.repel(tank.x, tank.y, avgx, avgy))
+        for othertank in self.mytanks + self.othertanks:
+            if othertank.x != tank.x and othertank.y != tank.y:
+                vectors.append(self.repel(tank.x, tank.y, othertank.x, othertank.y, 10, 20))
         if tank.flag == '-':
             bestflag = None
             distbest = 2000
@@ -140,19 +147,19 @@ class Agent(object):
         if dist < radius:
             return 0, 0
         elif dist > radius + spread:
-            mag = spread * 5
+            mag = spread
             return mag * math.cos(theta), mag * math.sin(theta)
         else:
             mag = (dist - radius) * 5
             return mag * math.cos(theta), mag * math.sin(theta)
 
-    def baserepel(self, targetx, targety, obstacle, radius, spread):
+    def obsrepel(self, targetx, targety, obstacle, radius, spread):
         pass
 
-    def repel(self, targetx, targety, originx, originy, radius = 25, spread = 100):
+    def repel(self, targetx, targety, originx, originy, radius = 40, spread = 150):
         theta = math.atan2(-(originy - targety), -(originx - targetx))
         dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
-        mag = (spread + radius - dist) * 20
+        mag = (spread + radius - dist) * 4
         if dist > radius + spread:
             return 0, 0
         elif dist < radius:

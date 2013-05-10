@@ -253,6 +253,76 @@ class Plot():
 			gp.write(self.plot_field(field_function))
 >>>>>>> add039c6dc890718da8e9d7a07fe70143ba3a943
 
+	def get_vector(x, y):
+		#Here, create a vector by iterating through flags, obstacles and other tanks
+		vectors = []
+		for obstacle in self.obstacles:
+			avgx = 0
+			avgy = 0
+			for corner in obstacle:
+				avgx += corner[0]
+				avgy += corner[1]
+			avgx /= 4
+			avgy /= 4				
+			vectors.append(self.repel(tank.x, tank.y, avgx, avgy))
+		for othertank in self.mytanks + self.othertanks:
+			if othertank.x != tank.x and othertank.y != tank.y:
+				vectors.append(self.repel(tank.x, tank.y, othertank.x, othertank.y, 10, 20))
+		if tank.flag == '-':
+			bestflag = None
+			distbest = 2000
+			for flag in self.flags:
+				if flag.color in self.enemycolors and math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2) < distbest:
+					distbest = math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2)
+					bestflag = flag
+			if bestflag != None:
+				vectors.append(self.attract(tank.x, tank.y, bestflag.x, bestflag.y))
+		else:
+			for base in self.bases:
+				if base.color not in self.enemycolors: 
+					center = ((base.corner1_x + base.corner2_x + base.corner3_x + base.corner4_x)/4,
+							  (base.corner1_y + base.corner2_y + base.corner3_y + base.corner4_y)/4)
+					vectors.append(self.attract(tank.x, tank.y, center[0], center[1], 0, 2000))
+		
+		overallvector = [0, 0]
+		for vector in vectors:
+			overallvector[0] += vector[0]
+			overallvector[1] += vector[1]
+		mag = math.sqrt(overallvector[0]**2 + overallvector[1]**2)
+		overallvector[0] /= mag
+		overallvector[1] /= mag
+		return math.atan2(overallvector[1], overallvector[0]), 1 #math.sqrt(overallvector[0]**2 + overallvector[1]**2) #Angle, Velocity
+
+	def attract(self, targetx, targety, originx, originy, radius = 0, spread = 800):
+		theta = math.atan2((originy - targety), (originx - targetx))
+		dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
+		if dist < radius:
+			return 0, 0
+		elif dist > radius + spread:
+			mag = spread
+			return mag * math.cos(theta), mag * math.sin(theta)
+		else:
+			mag = (dist - radius) * 5
+			return mag * math.cos(theta), mag * math.sin(theta)
+
+	def repel(self, targetx, targety, originx, originy, radius = 40, spread = 150):
+		theta = math.atan2(-(originy - targety), -(originx - targetx))
+		dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
+		mag = (spread + radius - dist) * 4
+		if dist > radius + spread:
+			return 0, 0
+		elif dist < radius:
+			mag = 1000
+		return mag * math.cos(theta), mag * math.sin(theta)
+
+#	def tangent(self, targetx, targety, originx, originy, radius = 0, spread = 100):
+#		theta = self.normalize_angle(math.atan2((originy - targety), (originx - targetx)) + math.pi / 2)
+#		dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
+#		if dist > radius + spread:
+#			return 0, 0
+#		else:
+#			return (radius + spread - dist) * math.cos(theta), (radius + spread - dist) * math.sin(theta)
+
 
 
 class main():
@@ -282,6 +352,18 @@ class main():
 		plotter.plotToFile(realobs)
 		
 		plotter.appendToFile(flags, enemies)
+		
+		self.obstacles = __bzrc__.get_obstacles()
+		self.mytanks = __bzrc__.get_mytanks()
+		self.othertanks = __bzrc__.get_othertanks()
+		self.flags = __bzrc__.get_flags()
+		self.bases = __bzrc__.get_bases()
+		self.enemycolors = []
+		for tank in othertanks:
+			if tank.color not in self.enemycolors:
+				self.enemycolors.append(tank.color)
+		
+		vector = self.get_vector(0, 0)
 		
 		#s = raw_input(tanks)
 		
