@@ -114,14 +114,14 @@ class Agent(object):
             avgx /= 4
             avgy /= 4                
             vectors.append(self.repel(tank.x, tank.y, avgx, avgy))
-        for othertank in self.mytanks + self.othertanks:
+        for othertank in self.mytanks:
             if othertank.x != tank.x and othertank.y != tank.y:
-                vectors.append(self.repel(tank.x, tank.y, othertank.x, othertank.y, 10, 20))
+                vectors.append(self.tangent(tank.x, tank.y, othertank.x, othertank.y, 0, 50))
         if tank.flag == '-':
             bestflag = None
             distbest = 2000
             for flag in self.flags:
-                if flag.color in self.enemycolors and math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2) < distbest:
+                if (flag.color in self.enemycolors and (flag.poss_color == 'none' or flag.poss_color in self.enemycolors) and math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2) < distbest):
                     distbest = math.sqrt((flag.x - tank.x)**2 + (flag.y - tank.y)**2)
                     bestflag = flag
             if bestflag != None:
@@ -131,7 +131,7 @@ class Agent(object):
                 if base.color not in self.enemycolors: 
                     center = ((base.corner1_x + base.corner2_x + base.corner3_x + base.corner4_x)/4,
                               (base.corner1_y + base.corner2_y + base.corner3_y + base.corner4_y)/4)
-                    vectors.append(self.attract(tank.x, tank.y, center[0], center[1], 0, 2000))
+                    vectors.append(self.attract(tank.x, tank.y, center[0], center[1]))
         
         overallvector = [0, 0]
         for vector in vectors:
@@ -150,7 +150,7 @@ class Agent(object):
             mag = spread
             return mag * math.cos(theta), mag * math.sin(theta)
         else:
-            mag = (dist - radius) * 5
+            mag = spread#(dist - radius)
             return mag * math.cos(theta), mag * math.sin(theta)
 
     def obsrepel(self, targetx, targety, obstacle, radius, spread):
@@ -159,20 +159,21 @@ class Agent(object):
     def repel(self, targetx, targety, originx, originy, radius = 40, spread = 150):
         theta = math.atan2(-(originy - targety), -(originx - targetx))
         dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
-        mag = (spread + radius - dist) * 4
+        mag = (spread + radius - dist)/(radius + spread) * 400
         if dist > radius + spread:
             return 0, 0
         elif dist < radius:
-            mag = 1000
+            mag = 10000
         return mag * math.cos(theta), mag * math.sin(theta)
 
-    def tangent(self, targetx, targety, originx, originy, radius = 0, spread = 100):
+    def tangent(self, targetx, targety, originx, originy, radius = 0, spread = 20):
         theta = self.normalize_angle(math.atan2((originy - targety), (originx - targetx)) + math.pi / 2)
         dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
         if dist > radius + spread:
             return 0, 0
         else:
-            return (radius + spread - dist) * math.cos(theta), (radius + spread - dist) * math.sin(theta)
+            mag = (radius + spread - dist)/(radius + spread) * 100
+            return mag * math.cos(theta), mag * math.sin(theta)
 
 
 def main():
