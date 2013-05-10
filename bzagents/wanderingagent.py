@@ -156,7 +156,7 @@ class Agent(object):
     def obsrepel(self, targetx, targety, obstacle, radius, spread):
         pass
 
-    def repel(self, targetx, targety, originx, originy, radius = 40, spread = 150):
+    def repel(self, targetx, targety, originx, originy, radius = 40, spread = 250):
         theta = math.atan2(-(originy - targety), -(originx - targetx))
         dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
         mag = (spread + radius - dist)/(radius + spread) * 400
