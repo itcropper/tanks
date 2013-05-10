@@ -7,6 +7,7 @@ from __future__ import division
 from itertools import cycle
 
 from bzrc import BZRC
+from wanderingagent import *
 from Gnuplot import GnuplotProcess
 import sys
 
@@ -59,7 +60,7 @@ ANIMATION_MIN = 0
 ANIMATION_MAX = 500
 ANIMATION_FRAMES = 50
 
-
+AGENT = None
 
 class Plot():
 	
@@ -190,6 +191,7 @@ class Plot():
 					for y in linspace(start, end, SAMPLES))
 
 		for x, y in points:
+
 			f_x, f_y = function(x + 50, y + 50)
 			plotvalues = self.gpi_point(x, y, f_x, f_y)
 			if plotvalues is not None:
@@ -217,7 +219,7 @@ class Plot():
 		print >>outfile, self.draw_points(flags, "flags")
 		print >>outfile, self.draw_points(tanks, "tanks")
 
-		field_function = self.generate_field_function(100)
+		field_function = AGENT.
 		print >>outfile, self.plot_field(field_function)
 
 
@@ -237,21 +239,11 @@ class Plot():
 		gp = GnuplotProcess(persist=False)
 		gp.write(self.gnuplot_header(-WORLDSIZE / 4, WORLDSIZE / 4))
 		gp.write(self.draw_obstacles(obstacles))
-<<<<<<< HEAD
+
 		#gp.write(self.draw_points(tanks, "tanks"))
-
-		#print "getting here alright:"
-
 		#for scale in cycle(anim_points):
 		#	field_function = self.generate_field_function(scale)
-
 		#	gp.write(self.plot_field(field_function))
-=======
-		gp.write(self.draw_points(tanks, "tanks"))
-		for scale in cycle(anim_points):
-			field_function = self.generate_field_function(scale)
-			gp.write(self.plot_field(field_function))
->>>>>>> add039c6dc890718da8e9d7a07fe70143ba3a943
 
 
 
@@ -275,6 +267,8 @@ class main():
 		enemies = __bzrc__.get_othertanks()
 		bases = __bzrc__.get_bases()
 		flags = __bzrc__.get_flags()
+
+		AGENT = Agent(__bzrc__)
 		
 		
 		plotter = Plot()
