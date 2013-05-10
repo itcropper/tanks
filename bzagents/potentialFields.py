@@ -237,6 +237,7 @@ class Plot():
 		gp = GnuplotProcess(persist=False)
 		gp.write(self.gnuplot_header(-WORLDSIZE / 4, WORLDSIZE / 4))
 		gp.write(self.draw_obstacles(obstacles))
+<<<<<<< HEAD
 		#gp.write(self.draw_points(tanks, "tanks"))
 
 		#print "getting here alright:"
@@ -245,6 +246,12 @@ class Plot():
 		#	field_function = self.generate_field_function(scale)
 
 		#	gp.write(self.plot_field(field_function))
+=======
+		gp.write(self.draw_points(tanks, "tanks"))
+		for scale in cycle(anim_points):
+			field_function = self.generate_field_function(scale)
+			gp.write(self.plot_field(field_function))
+>>>>>>> add039c6dc890718da8e9d7a07fe70143ba3a943
 
 
 
