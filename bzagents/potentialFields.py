@@ -12,35 +12,33 @@ import sys
 
 __bzrc__ = None
 
-try:
-    from numpy import linspace
-except ImportError:
-    # This is stolen from numpy.  If numpy is installed, you don't
-    # need this:
-    def linspace(start, stop, num=50, endpoint=True, retstep=False):
-        """Return evenly spaced numbers.
 
-        Return num evenly spaced samples from start to stop.  If
-        endpoint is True, the last sample is stop. If retstep is
-        True then return the step value used.
-        """
-        num = int(num)
-        if num <= 0:
-            return []
-        if endpoint:
-            if num == 1:
-                return [float(start)]
-            step = (stop-start)/float((num-1))
-            y = [x * step + start for x in xrange(0, num - 1)]
-            y.append(stop)
-        else:
-            step = (stop-start)/float(num)
-            y = [x * step + start for x in xrange(0, num)]
-        if retstep:
-            return y, step
-        else:
-            return y
-            
+# This is stolen from numpy.  If numpy is installed, you don't
+# need this:
+def linspace(start, stop, num=200, endpoint=True, retstep=False):
+    """Return evenly spaced numbers.
+
+    Return num evenly spaced samples from start to stop.  If
+    endpoint is True, the last sample is stop. If retstep is
+    True then return the step value used.
+    """
+    num = int(num)
+    if num <= 0:
+        return []
+    if endpoint:
+        if num == 1:
+            return [float(start)]
+        step = (stop-start)/float((num-1))
+        y = [x * step + start for x in xrange(0, num - 1)]
+        y.append(stop)
+    else:
+        step = (stop-start)/float(num)
+        y = [x * step + start for x in xrange(0, num)]
+    if retstep:
+        return y, step
+    else:
+        return y
+        
 
 
 
@@ -52,7 +50,7 @@ FILENAME = 'fields.gpi'
 # Size of the world (one of the "constants" in bzflag):
 WORLDSIZE = 1000
 # How many samples to take alplotToFileong each dimension:
-SAMPLES = 25
+SAMPLES = 50
 # Change spacing by changing the relative length of the vectors.  It looks
 # like scaling by 0.75 is pretty good, but this is adjustable:
 VEC_LEN = 0.75 * WORLDSIZE / SAMPLES
@@ -133,39 +131,44 @@ class Plot():
 			s += self.draw_line(last_point, obs[0])
 		return s
 		
+	def drawSquares(self, x, y):
+		arrow = "set arrow from "
+		end = " nohead lt 2"
+
+		left = arrow + str(x - 10) + ", "+ str(y - 10) + " to " + str(x - 10) + ", "+ str(y + 10) + end + "\n"
+		top = arrow + str(x - 10) + ", "+ str(y + 10) + " to " + str(x + 10) + ", "+ str(y + 10) + end + "\n"
+		right = arrow + str(x + 10) + ", "+ str(y + 10) + " to " + str(x + 10) + ", "+ str(y - 10) + end + "\n"
+		bottom = arrow + str(x + 10) + ", "+ str(y - 10) + " to " + str(x - 10) + ", "+ str(y - 10) + end + "\n"
+
+		return left + top + right + bottom + "\n"
+
+	def drawExes(self, x, y):
+		arrow = "set arrow from "
+		end = " nohead lt 4"
+
+		left = arrow + str(x - 10) + ", "+ str(y - 10) + " to " + str(x + 10) + ", "+ str(y + 10) + end + "\n"
+		top = arrow + str(x - 10) + ", "+ str(y + 10) + " to " + str(x + 10) + ", "+ str(y - 10) + end + "\n"
+
+		return left + top + "\n"
 		
 	def draw_points(self, points, element):
 		
-		#s = raw_input(points)
+		'''
+		set arrow from 0.0, 0.0 to 0.0, 20.0 nohead lt 4
+		set arrow from 0.0, 20.0 to 20.0, 20.0 nohead lt 4
+		set arrow from 20.0, 20.0 to 20.0, 0.0 nohead lt 4
+		set arrow from 20.0, 0.0 to 0.0, 0.0 nohead lt 4
+		'''
 		
-		s = "set pointsize 1.5\n"
-		s += "set border linewidth 1\n"
-		
-		if element == "tanks": #tanks are squares
-			s += "set style line 1 lc rgb '#0060ad' pt 5   # square\n"
-			
-		elif element == "flags": #flags are circles
-			
-			s += "set style line 2 lc rgb '#0060ad' pt 7   # circle\n"
-		
-		s += "# Plot some points\nplot "
-		
-		for i in range(len(points)):
-			if i != len(points) - 1:
-				s += "'-' w p ls "+str(i + 1)+", "
-			else:
-				s += "'-' w p ls "+str(i + 1)+"\n "
-		
-		
+		s = ''
+
 		for p in points:
-			#t = raw_input(p.x)
-			#x = p.x
-			#y = p.y
-			#if x < 0 or y < 0:
-			#	continue
-			s += str(round(p.x,1)) + " " + str(round(p.y,1)) + "\n"
-			s += "e \n"
-	
+			if element == "tanks": #tanks are squares
+				s += self.drawSquares(p.x, p.y)
+				
+			elif element == "flags": #flags are circles
+				s += self.drawExes(p.x, p.y)
+
 		return s
 		
 		
@@ -181,12 +184,13 @@ class Plot():
 		separation = WORLDSIZE / SAMPLES
 		end = WORLDSIZE / 2 - separation / 2
 		start = -end
+		#---------------------------------------------------------Here is where you need to change stuff up
 
 		points = ((x, y) for x in linspace(start, end, SAMPLES)
 					for y in linspace(start, end, SAMPLES))
 
 		for x, y in points:
-			f_x, f_y = function(x, y)
+			f_x, f_y = function(x + 50, y + 50)
 			plotvalues = self.gpi_point(x, y, f_x, f_y)
 			if plotvalues is not None:
 				x1, y1, x2, y2 = plotvalues
@@ -203,31 +207,43 @@ class Plot():
 		outfile = open(FILENAME, 'w')
 		print >>outfile, self.gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
 		print >>outfile, self.draw_obstacles(obstacles)
-		field_function = self.generate_field_function(100)
-		print >>outfile, self.plot_field(field_function)
+
 		
-	def appendToFile(self, points):
+	def appendToFile(self, flags, tanks):
+
+		#print "appending to file"
 		
 		outfile = open(FILENAME, 'a')
-		print >>outfile, self.draw_points(points, "tanks")
+		print >>outfile, self.draw_points(flags, "flags")
+		print >>outfile, self.draw_points(tanks, "tanks")
+
+		field_function = self.generate_field_function(100)
+		print >>outfile, self.plot_field(field_function)
 
 
 	########################################################################
 	# Animate a changing field, if the Python Gnuplot library is present
 
 
-	def animate(self, obstacles, tanks):
+	def animate(self, obstacles):
 
 		forward_list = list(linspace(ANIMATION_MIN, ANIMATION_MAX, ANIMATION_FRAMES/2))
 		backward_list = list(linspace(ANIMATION_MAX, ANIMATION_MIN, ANIMATION_FRAMES/2))
+
+		#print forward_list
+
 		anim_points = forward_list + backward_list
 
 		gp = GnuplotProcess(persist=False)
 		gp.write(self.gnuplot_header(-WORLDSIZE / 4, WORLDSIZE / 4))
 		gp.write(self.draw_obstacles(obstacles))
-		gp.write(self.draw_points(tanks, "tanks"))
+		#gp.write(self.draw_points(tanks, "tanks"))
+
+		#print "getting here alright:"
+
 		#for scale in cycle(anim_points):
 		#	field_function = self.generate_field_function(scale)
+
 		#	gp.write(self.plot_field(field_function))
 
 
@@ -253,20 +269,18 @@ class main():
 		bases = __bzrc__.get_bases()
 		flags = __bzrc__.get_flags()
 		
-		#print realobs
 		
 		plotter = Plot()
 		
 		plotter.plotToFile(realobs)
 		
-		
-		plotter.appendToFile(enemies)
+		plotter.appendToFile(flags, enemies)
 		
 		#s = raw_input(tanks)
 		
 		#plotter.plotToFile(plotter.draw_points(flags, "flags"))
 		
-		plotter.animate(realobs, enemies)
+		plotter.animate(realobs)
 
 
 
