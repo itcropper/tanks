@@ -28,12 +28,11 @@ from bzrc import BZRC, Command
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
+    tanks = []
 
     def __init__(self, bzrc):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
-        self.obstacles = self.bzrc.get_obstacles()
-        self.othertanks = self.bzrc.get_othertanks()
         self.commands = []
 
     def tick(self, time_diff):
@@ -45,10 +44,11 @@ class Agent(object):
         self.shots = shots
         self.enemies = [tank for tank in othertanks if tank.color !=
                         self.constants['team']]
+
         self.commands = []
 
-        #for tank in mytanks:
-        #    self.attack_enemies(tank)
+        for tank in mytanks:
+            self.attack_enemies(tank)
 
         results = self.bzrc.do_commands(self.commands)
 
@@ -86,26 +86,6 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
-    def init_screen(self):
-        rad = int(self.constants["worldsize"]) / 2
-        print "set terminal wxt size 600,600"
-        print "set xrange [" + str(-rad) + ':' + str(rad) + "]"
-        print "set yrange [" + str(-rad) + ':' + str(rad) + "]"
-        print "unset xtics"
-        print "unset ytics"
-        print "set style arrow 1 nohead"
-
-
-    def refresh_screen(self):
-        print "unset arrow"
-        print "unset obj"
-        for obstacle in self.obstacles:
-            for i in range(len(obstacle)):
-                print "set arrow from", str(obstacle[i][0]) + ', ' + str(obstacle[i][1]), "to", str(obstacle[(i + 1) % len(obstacle)][0]) + ', ' + str(obstacle[(i + 1) % len(obstacle)][1]), "as 1"
-        for othertank in self.othertanks:
-            print "set obj rect from", str(othertank.x - 3) + ', ' + str(othertank.y - 3), "to", str(othertank.x + 3) + ', ' + str(othertank.y + 3)
-            #print str(tank.x) + ', ' + str(tank.y)
-        print "plot NaN notitle"
 
 def main():
     # Process CLI arguments.
@@ -124,9 +104,6 @@ def main():
     agent = Agent(bzrc)
 
     prev_time = time.time()
-
-    agent.init_screen()
-    agent.refresh_screen()
     
     # Run the agent
     try:

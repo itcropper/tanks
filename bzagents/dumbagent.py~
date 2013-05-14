@@ -23,6 +23,7 @@
 import sys
 import math
 import time
+import random
 
 from bzrc import BZRC, Command
 
@@ -32,9 +33,9 @@ class Agent(object):
     def __init__(self, bzrc):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
-        self.obstacles = self.bzrc.get_obstacles()
-        self.othertanks = self.bzrc.get_othertanks()
         self.commands = []
+        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
+        self.tankinfo = [{'IsMoving': False, 'TimeMoving': 0, 'Fired': 0, 'CurAngle': tank.angle} for tank in mytanks]
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -46,11 +47,38 @@ class Agent(object):
         self.enemies = [tank for tank in othertanks if tank.color !=
                         self.constants['team']]
         self.commands = []
-
-        #for tank in mytanks:
-        #    self.attack_enemies(tank)
+        for tank in mytanks:
+            self.dumb_movement(tank, time_diff)
 
         results = self.bzrc.do_commands(self.commands)
+
+    def dumb_movement(self, tank, time_diff):
+        """Duh! Move for 3-8 seconds, then rotate 60 degrees. Shoot every 2 seconds or so!"""
+        self.tankinfo[tank.index]['Fired'] -= time_diff
+        self.tankinfo[tank.index]['TimeMoving'] -= time_diff
+
+        isFiring = False
+        if self.tankinfo[tank.index]['Fired'] < 0:
+            self.tankinfo[tank.index]['Fired'] = random.random() * 2 + 1
+            isFiring = True
+
+        if self.tankinfo[tank.index]['IsMoving'] and self.tankinfo[tank.index]['TimeMoving'] < 0:
+            self.tankinfo[tank.index]['IsMoving'] = False
+            if random.random() > 0.5:
+                self.tankinfo[tank.index]['CurAngle'] = self.normalize_angle(self.tankinfo[tank.index]['CurAngle'] + math.pi / 3)
+            else:
+                self.tankinfo[tank.index]['CurAngle'] = self.normalize_angle(self.tankinfo[tank.index]['CurAngle'] - math.pi / 3)
+
+        if round(tank.angle, 1) == round(self.tankinfo[tank.index]['CurAngle'], 1) and self.tankinfo[tank.index]['TimeMoving'] < 0:
+            self.tankinfo[tank.index]['TimeMoving'] = random.random() * 5 + 3
+            self.tankinfo[tank.index]['IsMoving'] = True
+
+        speed = 0
+        if self.tankinfo[tank.index]['TimeMoving'] > 0:
+            speed = 1
+        relative_angle = self.normalize_angle(self.tankinfo[tank.index]['CurAngle'] - tank.angle)
+        command = Command(tank.index, speed, 2 * relative_angle, isFiring)
+        self.commands.append(command)
 
     def attack_enemies(self, tank):
         """Find the closest enemy and chase it, shooting as you go."""
@@ -86,26 +114,6 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
-    def init_screen(self):
-        rad = int(self.constants["worldsize"]) / 2
-        print "set terminal wxt size 600,600"
-        print "set xrange [" + str(-rad) + ':' + str(rad) + "]"
-        print "set yrange [" + str(-rad) + ':' + str(rad) + "]"
-        print "unset xtics"
-        print "unset ytics"
-        print "set style arrow 1 nohead"
-
-
-    def refresh_screen(self):
-        print "unset arrow"
-        print "unset obj"
-        for obstacle in self.obstacles:
-            for i in range(len(obstacle)):
-                print "set arrow from", str(obstacle[i][0]) + ', ' + str(obstacle[i][1]), "to", str(obstacle[(i + 1) % len(obstacle)][0]) + ', ' + str(obstacle[(i + 1) % len(obstacle)][1]), "as 1"
-        for othertank in self.othertanks:
-            print "set obj rect from", str(othertank.x - 3) + ', ' + str(othertank.y - 3), "to", str(othertank.x + 3) + ', ' + str(othertank.y + 3)
-            #print str(tank.x) + ', ' + str(tank.y)
-        print "plot NaN notitle"
 
 def main():
     # Process CLI arguments.
@@ -125,13 +133,11 @@ def main():
 
     prev_time = time.time()
 
-    agent.init_screen()
-    agent.refresh_screen()
-    
     # Run the agent
     try:
         while True:
             time_diff = time.time() - prev_time
+            prev_time = time.time()
             agent.tick(time_diff)
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
