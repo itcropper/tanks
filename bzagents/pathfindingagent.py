@@ -122,12 +122,23 @@ def main():
     bzrc = BZRC(host, int(port))
 
     agent = Agent(bzrc)
-
     prev_time = time.time()
+
+    occgrid = bzrc.get_occgrid(0)
+    print len(occgrid)
+    print occgrid[0]
+    trueocc = []
+    for y in occgrid[1]:
+        row = []
+        for x in occgrid[1][y]:
+            row.append(x)
+        trueocc.append(y)
 
     agent.init_screen()
     agent.refresh_screen()
     
+    
+
     # Run the agent
     try:
         while True:
