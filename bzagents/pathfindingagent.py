@@ -125,14 +125,21 @@ def main():
     prev_time = time.time()
 
     occgrid = bzrc.get_occgrid(0)
-    print len(occgrid)
-    print occgrid[0]
-    trueocc = []
-    for y in occgrid[1]:
-        row = []
-        for x in occgrid[1][y]:
-            row.append(x)
-        trueocc.append(y)
+
+    tanks = bzrc.get_othertanks()
+    for othertank in tanks:
+        occgrid[1][int(othertank.x) - occgrid[0][0]][int(othertank.y) - occgrid[0][1]] = 1
+    print "set terminal wxt size 600,600"
+    print "set xrange [" + str(occgrid[0][0]) + ":" + str(len(occgrid[1]) + occgrid[0][0]) + "]"
+    print "set yrange [" + str(occgrid[0][1]) + ":" + str(len(occgrid[1][0]) + occgrid[0][1]) + "]"
+    print 'plot "-" notitle'
+    for x in range(len(occgrid[1])):
+        for y in range(len(occgrid[1][x])):
+            if occgrid[1][x][y] == 1:
+                print x + occgrid[0][0], y + occgrid[0][1]
+    print 'e'
+    return
+
 
     agent.init_screen()
     agent.refresh_screen()
