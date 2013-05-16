@@ -34,6 +34,8 @@ class Agent(object):
         self.constants = self.bzrc.get_constants()
         self.obstacles = self.bzrc.get_obstacles()
         self.othertanks = self.bzrc.get_othertanks()
+        self.occgrid = self.bzrc.get_occgrid(0)
+
         self.commands = []
 
     def tick(self, time_diff):
@@ -107,6 +109,17 @@ class Agent(object):
             #print str(tank.x) + ', ' + str(tank.y)
         print "plot NaN notitle"
 
+    def test_occgrid(self):
+        print "set terminal wxt size 600,600"
+        print "set xrange [" + str(self.occgrid[0][0]) + ":" + str(len(self.occgrid[1]) + self.occgrid[0][0]) + "]"
+        print "set yrange [" + str(self.occgrid[0][1]) + ":" + str(len(self.occgrid[1][0]) + self.occgrid[0][1]) + "]"
+        print 'plot "-" notitle'
+        for x in range(len(self.occgrid[1])):
+            for y in range(len(self.occgrid[1][x])):
+                if self.occgrid[1][x][y] == 1:
+                    print x + self.occgrid[0][0], y + self.occgrid[0][1]
+        print 'e'
+
 def main():
     # Process CLI arguments.
     try:
@@ -124,22 +137,8 @@ def main():
     agent = Agent(bzrc)
     prev_time = time.time()
 
-    occgrid = bzrc.get_occgrid(0)
-
-    tanks = bzrc.get_othertanks()
-    for othertank in tanks:
-        occgrid[1][int(othertank.x) - occgrid[0][0]][int(othertank.y) - occgrid[0][1]] = 1
-    print "set terminal wxt size 600,600"
-    print "set xrange [" + str(occgrid[0][0]) + ":" + str(len(occgrid[1]) + occgrid[0][0]) + "]"
-    print "set yrange [" + str(occgrid[0][1]) + ":" + str(len(occgrid[1][0]) + occgrid[0][1]) + "]"
-    print 'plot "-" notitle'
-    for x in range(len(occgrid[1])):
-        for y in range(len(occgrid[1][x])):
-            if occgrid[1][x][y] == 1:
-                print x + occgrid[0][0], y + occgrid[0][1]
-    print 'e'
+    agent.test_occgrid()
     return
-
 
     agent.init_screen()
     agent.refresh_screen()
