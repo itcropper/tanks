@@ -14,8 +14,11 @@ class Cell():
 		self.value = value
 		self.reachable = reachable
 
+		self.end = False
+
 		self.heuristic = None
 		self.parent = None
+		self.cost = 0
 
 
 class Grid():
@@ -24,38 +27,76 @@ class Grid():
 
 		self.bzrc = BZRC("localhost", int(port))
 		self.grid = self.bzrc.get_occgrid(0)
-		self.top = -1 * int(self.grid[0][0])
-		self.bottom = int(self.grid[0][1])
+
+		#print self.grid
+
+		
+		self.height = len(self.grid[1])
+		self.width  = len(self.grid[1][3])
+
+		self.bottom = int(self.grid[0][0])
+		self.top = self.bottom + self.height
+
+		self.left = int(self.grid[0][0])
+		self.right = self.left + self.width
+
+		# print "Left: " , self.left
+		# print 'Right: ', self.right
+		# print 'Top: ', self.top
+		# print 'Bottom: ', self.bottom
+
+
+		#print self.height, self.width
 
 		self.number_grid = self.grid[1:][0]
+
+		#print self.number_grid
+
 		self.grid = []
+
+		self.goal =  (int(self.bzrc.get_flags()[2].x), int(self.bzrc.get_flags()[2].y))
+		# print "Goal: ", self.goal
+		self.start = (int(self.bzrc.get_mytanks()[0].x), int(self.bzrc.get_mytanks()[0].y))
+		# print "START: " , self.start
 
 
 	'''
 	@param goal: tuple(x, y)
 	@returns grid of cell objects
 	'''
-	def get_grid(self, goal):
-		yList = []
+	def get_grid(self):
+
+		xList = []
 		
-		for y in range(len(self.number_grid)):
+		for x in range(self.height):
+			#g = raw_input(self.number_grid[y])
+			yList = []
 
-			xList = []
+			for y in range(self.width):
 
-			for x in range(len(self.number_grid[y])):
-				if self.number_grid[y][x] == 1:
+				reachable = True
+
+				if self.number_grid[x][y] == 1:
 					reachable = False
 				else:
 					reachable = True
+					#print "reachable at: " + str(x) + " : " + str(y)
 
-				xList.append(Cell(x, y, reachable, self.distance(x, y, goal)))
+				cell = Cell(self.left + x, self.bottom + y, reachable, self.distance(self.left + x, self.right + y, self.goal))
+				
+				if (self.left + x, self.top + y) == self.goal:
+					cell.end = True
+
+				#s = raw_input("Goal Location: " + str(x + self.left) + " : " + str(y + self.bottom) + " : " + str(self.number_grid[y][x]))
+
+				yList.append(cell)
 
 
-			yList.append(xList)
+			xList.append(yList)
 
-		print len(yList), len(xList)
+		#print len(yList), len(xList)
 
-		self.grid = yList
+		self.grid = xList
 
 		return y
 				
@@ -63,8 +104,27 @@ class Grid():
 		return math.sqrt((abs(x - goal[0])**2 + (abs(y - goal[1])**2)))
 
 	def get_cell(self, x, y):
-		print "Getting Cell: ", x + 200, y + 200
-		return self.grid[200 + x - 1][y + 200 - 1]
+
+		x = int(x + self.right)
+		y = int(y + self.top)
+
+		#print "Get Cell: ", x, y
+
+		try:
+			return self.grid[x][y]
+		except(IndexError):
+			print "Max is: " + str(len(self.grid)) + ", " + str(len(self.grid[0]))
+			print "Error on: Index: " + str(x) + ", " + str(y)
+			sys.exit(0)
+
+	def get_cell_tuple(self, xy):
+		x = int(xy[0] + self.right)
+		y = int(xy[1] + self.top)
+
+		return self.grid[x][y]
+
+	def get_cell_by_cell(self, c):
+		return self.grid[int(c[0])][int(c[1])]
 
 				
 
