@@ -40,7 +40,13 @@ class Agent(object):
         self.obstacles = self.bzrc.get_obstacles()
         self.othertanks = self.bzrc.get_othertanks()
         self.occgrid = self.bzrc.get_occgrid(0)
-        self.grid = Grid(bzrc)
+        for tank in self.othertanks:
+            for cha in [(x, y) for x in range(-3, 4) for y in range(-3, 4) if (x, y) != (0, 0)]:
+                newx = int(tank.x) + cha[0] - self.occgrid[0][0]
+                newy = int(tank.y) + cha[1] - self.occgrid[0][1]
+                if newx >= 0 and newy >= 0 and newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][x]):
+                    self.occgrid[1][newx][newy] = 1
+        self.grid = Grid(bzrc, self.occgrid)
         self.op = []
         self.path = []
         heapq.heapify(self.op)
@@ -205,35 +211,33 @@ class Agent(object):
         print 'plot NaN notitle'
 
     def iterative_search(self, start, goal):
-        ToVisit = [Node(int(start.x), int(start.y),
-            math.sqrt((int(start.x) - int(goal.x)) ** 2 + (int(start.y) - int(goal.y)) ** 2), None)]
-        Visited = {}
-        curNode = None
         lastupdate = time.time()
-        while len(ToVisit) > 0:
-            curNode = ToVisit[0]
-            lowi = 0
-            for i in range(len(ToVisit)):
-                if ToVisit[i].d < curNode.d:
-                    lowi = i
-                    curNode = ToVisit[i]
-            curNode = ToVisit.pop(lowi)
-            if curNode.parent != None:
-                print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
-            if curNode.x == goal.x and curNode.y == goal.y:
-                break
-            for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
-                newx = curNode.x + cha[0] - self.occgrid[0][0]
-                newy = curNode.y + cha[1] - self.occgrid[0][1]
-                if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
-                    if self.occgrid[1][newx][newy] == 0 and (curNode.x + cha[0], curNode.y + cha[1]) not in Visited:
-                        newVisit = Node(curNode.x + cha[0], curNode.y + cha[1], curNode.d + math.sqrt(cha[0] ** 2 + cha[1] ** 2),
-                            math.sqrt((curNode.x + cha[0] - goal.x) ** 2 + (curNode.y + cha[1] - goal.y) ** 2), curNode)
-                        Visited[newVisit.x, newVisit.y] = newVisit
-                        ToVisit.append(newVisit)
-            if time.time() - lastupdate > 0.2:
-                print 'plot NaN notitle'
-                lastupdate = time.time()
+        curNode = None
+        limit = 0
+        while curNode == None or curNode.x != goal.x or curNode.y != goal.y:
+            limit += 1
+            ToVisit = [Node(int(start.x), int(start.y), 0,
+                math.sqrt((int(start.x) - int(goal.x)) ** 2 + (int(start.y) - int(goal.y)) ** 2), None)]
+            Visited = {}
+            self.refresh_screen()
+            while len(ToVisit) > 0:
+                curNode = ToVisit.pop()
+                if curNode.parent != None:
+                    print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
+                if curNode.x == goal.x and curNode.y == goal.y:
+                    break
+                for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+                    newx = curNode.x + cha[0] - self.occgrid[0][0]
+                    newy = curNode.y + cha[1] - self.occgrid[0][1]
+                    if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
+                        if self.occgrid[1][newx][newy] == 0 and (curNode.x + cha[0], curNode.y + cha[1]) not in Visited and curNode.d + math.sqrt(cha[0] ** 2 + cha[1] ** 2) < limit:
+                            newVisit = Node(curNode.x + cha[0], curNode.y + cha[1], curNode.d + math.sqrt(cha[0] ** 2 + cha[1] ** 2),
+                                math.sqrt((curNode.x + cha[0] - goal.x) ** 2 + (curNode.y + cha[1] - goal.y) ** 2), curNode)
+                            Visited[newVisit.x, newVisit.y] = newVisit
+                            ToVisit.append(newVisit)
+                if time.time() - lastupdate > 0.2:
+                    print 'plot NaN notitle'
+                    lastupdate = time.time()
         while curNode.parent != None:
                 print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 2'
                 curNode = curNode.parent
@@ -268,7 +272,7 @@ class Agent(object):
         print 'plot NaN notitle'
 
     def breadth_first(self, start, goal):
-        ToVisit = [Node(int(start.x), int(start.y),
+        ToVisit = [Node(int(start.x), int(start.y), 0,
             math.sqrt((int(start.x) - int(goal.x)) ** 2 + (int(start.y) - int(goal.y)) ** 2), None)]
         Visited = {}
         curNode = None
@@ -427,6 +431,8 @@ class Agent(object):
                         # add adj cell to open list
                         heapq.heappush(self.op, (c.value, c))
 
+    
+
     def run(self, heuristic):
         __HEURISTIC__ = heuristic
         
@@ -458,9 +464,9 @@ class Cell():
 
 class Grid():
 
-    def __init__(self, bzrc):
+    def __init__(self, bzrc, occgrid):
         self.bzrc = bzrc
-        self.grid = self.bzrc.get_occgrid(0)
+        self.grid = occgrid
 
         #print self.grid
 
@@ -600,16 +606,18 @@ def main():
     agent.init_screen()
     agent.refresh_screen()
 
+    #agent.test_occgrid()
     #agent.uniform_search(start, goal)
     #agent.greedy_search(start, goal)
     #agent.depth_first(start, goal)
     #agent.breadth_first(start, goal)
+    #agent.iterative_search(start, goal)
     path = agent.run(agent.get_heuristic)
     for i in range(len(path)):
         if i < len(path) - 1:
             print "set arrow from", str(path[i][0]) + ', ' + str(path[i][1]), "to ", str(path[i + 1][0]) + ', ' + str(path[i + 1][1]), "as 2"
     print "plot NaN notitle"
-    print time.time() - prev_time
+    #print time.time() - prev_time
     return
 
     
