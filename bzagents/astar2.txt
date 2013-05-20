@@ -1,0 +1,166 @@
+set terminal wxt size 600,600
+set xrange [-200:200]
+set yrange [-200:200]
+unset xtics
+unset ytics
+set style arrow 1 nohead lt rgb "#808080"
+set style arrow 2 nohead lw 3 lt rgb "#FF0000"
+unset arrow
+unset obj
+set arrow from 75.0, 75.0 to 75.0, 45.0 as 1
+set arrow from 75.0, 45.0 to 45.0, 45.0 as 1
+set arrow from 45.0, 45.0 to 45.0, 75.0 as 1
+set arrow from 45.0, 75.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 105.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 75.0 to 45.0, 75.0 as 1
+set arrow from 45.0, 75.0 to 45.0, 105.0 as 1
+set arrow from 45.0, 105.0 to 75.0, 105.0 as 1
+set arrow from 105.0, 75.0 to 105.0, 45.0 as 1
+set arrow from 105.0, 45.0 to 75.0, 45.0 as 1
+set arrow from 75.0, 45.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 75.0 to 105.0, 75.0 as 1
+set arrow from 75.0, -45.0 to 75.0, -75.0 as 1
+set arrow from 75.0, -75.0 to 45.0, -75.0 as 1
+set arrow from 45.0, -75.0 to 45.0, -45.0 as 1
+set arrow from 45.0, -45.0 to 75.0, -45.0 as 1
+set arrow from 105.0, -45.0 to 105.0, -75.0 as 1
+set arrow from 105.0, -75.0 to 75.0, -75.0 as 1
+set arrow from 75.0, -75.0 to 75.0, -45.0 as 1
+set arrow from 75.0, -45.0 to 105.0, -45.0 as 1
+set arrow from 75.0, -75.0 to 75.0, -105.0 as 1
+set arrow from 75.0, -105.0 to 45.0, -105.0 as 1
+set arrow from 45.0, -105.0 to 45.0, -75.0 as 1
+set arrow from 45.0, -75.0 to 75.0, -75.0 as 1
+set arrow from -45.0, -45.0 to -45.0, -75.0 as 1
+set arrow from -45.0, -75.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -75.0, -45.0 as 1
+set arrow from -75.0, -45.0 to -45.0, -45.0 as 1
+set arrow from -45.0, -75.0 to -45.0, -105.0 as 1
+set arrow from -45.0, -105.0 to -75.0, -105.0 as 1
+set arrow from -75.0, -105.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -45.0, -75.0 as 1
+set arrow from -75.0, -45.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -105.0, -75.0 as 1
+set arrow from -105.0, -75.0 to -105.0, -45.0 as 1
+set arrow from -105.0, -45.0 to -75.0, -45.0 as 1
+set arrow from -45.0, 75.0 to -45.0, 45.0 as 1
+set arrow from -45.0, 45.0 to -75.0, 45.0 as 1
+set arrow from -75.0, 45.0 to -75.0, 75.0 as 1
+set arrow from -75.0, 75.0 to -45.0, 75.0 as 1
+set arrow from -45.0, 105.0 to -45.0, 75.0 as 1
+set arrow from -45.0, 75.0 to -75.0, 75.0 as 1
+set arrow from -75.0, 75.0 to -75.0, 105.0 as 1
+set arrow from -75.0, 105.0 to -45.0, 105.0 as 1
+set arrow from -75.0, 75.0 to -75.0, 45.0 as 1
+set arrow from -75.0, 45.0 to -105.0, 45.0 as 1
+set arrow from -105.0, 45.0 to -105.0, 75.0 as 1
+set arrow from -105.0, 75.0 to -75.0, 75.0 as 1
+set arrow from 5.0, 30.0 to 5.0, -30.0 as 1
+set arrow from 5.0, -30.0 to -5.0, -30.0 as 1
+set arrow from -5.0, -30.0 to -5.0, 30.0 as 1
+set arrow from -5.0, 30.0 to 5.0, 30.0 as 1
+set obj rect from 25.4416410625, 126.495802141 to 31.4416410625, 132.495802141
+set obj rect from -32.1150408822, 167.835312317 to -26.1150408822, 173.835312317
+set obj rect from -1.53474544798, 161.097035966 to 4.46525455202, 167.097035966
+set obj rect from 11.391077401, 142.930851642 to 17.391077401, 148.930851642
+set obj rect from 25.8585633515, 167.38189968 to 31.8585633515, 173.38189968
+set obj rect from 19.9184298018, 157.78392226 to 25.9184298018, 163.78392226
+set obj rect from -18.0986441276, 167.397374232 to -12.0986441276, 173.397374232
+set obj rect from -10.5442681249, 157.608108471 to -4.54426812492, 163.608108471
+set obj rect from -17.6503059602, 108.113713175 to -11.6503059602, 114.113713175
+set obj rect from 37.5517607329, 130.090955155 to 43.5517607329, 136.090955155
+set obj rect from -4.89647079288, -174.186925676 to 1.10352920712, -168.186925676
+set obj rect from 4.87882181429, -198.665442818 to 10.8788218143, -192.665442818
+set obj rect from -46.4323403925, -186.750484628 to -40.4323403925, -180.750484628
+set obj rect from -23.0758836607, -152.849053904 to -17.0758836607, -146.849053904
+set obj rect from -24.2571304405, -187.094420053 to -18.2571304405, -181.094420053
+set obj rect from -66.6322713429, -173.895064577 to -60.6322713429, -167.895064577
+set obj rect from -57.0285574101, -186.733834323 to -51.0285574101, -180.733834323
+set obj rect from -7.29106509274, -137.750059799 to -1.29106509274, -131.750059799
+set obj rect from 47.7481910397, -171.17880412 to 53.7481910397, -165.17880412
+set obj rect from 49.9076095171, -153.529190343 to 55.9076095171, -147.529190343
+set obj rect from 168.013805315, 0.10949332886 to 174.013805315, 6.10949332886
+plot NaN notitle
+set terminal wxt size 600,600
+set xrange [-200:200]
+set yrange [-200:200]
+unset xtics
+unset ytics
+set style arrow 1 nohead lt rgb "#808080"
+set style arrow 2 nohead lw 3 lt rgb "#FF0000"
+unset arrow
+unset obj
+set arrow from 75.0, 75.0 to 75.0, 45.0 as 1
+set arrow from 75.0, 45.0 to 45.0, 45.0 as 1
+set arrow from 45.0, 45.0 to 45.0, 75.0 as 1
+set arrow from 45.0, 75.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 105.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 75.0 to 45.0, 75.0 as 1
+set arrow from 45.0, 75.0 to 45.0, 105.0 as 1
+set arrow from 45.0, 105.0 to 75.0, 105.0 as 1
+set arrow from 105.0, 75.0 to 105.0, 45.0 as 1
+set arrow from 105.0, 45.0 to 75.0, 45.0 as 1
+set arrow from 75.0, 45.0 to 75.0, 75.0 as 1
+set arrow from 75.0, 75.0 to 105.0, 75.0 as 1
+set arrow from 75.0, -45.0 to 75.0, -75.0 as 1
+set arrow from 75.0, -75.0 to 45.0, -75.0 as 1
+set arrow from 45.0, -75.0 to 45.0, -45.0 as 1
+set arrow from 45.0, -45.0 to 75.0, -45.0 as 1
+set arrow from 105.0, -45.0 to 105.0, -75.0 as 1
+set arrow from 105.0, -75.0 to 75.0, -75.0 as 1
+set arrow from 75.0, -75.0 to 75.0, -45.0 as 1
+set arrow from 75.0, -45.0 to 105.0, -45.0 as 1
+set arrow from 75.0, -75.0 to 75.0, -105.0 as 1
+set arrow from 75.0, -105.0 to 45.0, -105.0 as 1
+set arrow from 45.0, -105.0 to 45.0, -75.0 as 1
+set arrow from 45.0, -75.0 to 75.0, -75.0 as 1
+set arrow from -45.0, -45.0 to -45.0, -75.0 as 1
+set arrow from -45.0, -75.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -75.0, -45.0 as 1
+set arrow from -75.0, -45.0 to -45.0, -45.0 as 1
+set arrow from -45.0, -75.0 to -45.0, -105.0 as 1
+set arrow from -45.0, -105.0 to -75.0, -105.0 as 1
+set arrow from -75.0, -105.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -45.0, -75.0 as 1
+set arrow from -75.0, -45.0 to -75.0, -75.0 as 1
+set arrow from -75.0, -75.0 to -105.0, -75.0 as 1
+set arrow from -105.0, -75.0 to -105.0, -45.0 as 1
+set arrow from -105.0, -45.0 to -75.0, -45.0 as 1
+set arrow from -45.0, 75.0 to -45.0, 45.0 as 1
+set arrow from -45.0, 45.0 to -75.0, 45.0 as 1
+set arrow from -75.0, 45.0 to -75.0, 75.0 as 1
+set arrow from -75.0, 75.0 to -45.0, 75.0 as 1
+set arrow from -45.0, 105.0 to -45.0, 75.0 as 1
+set arrow from -45.0, 75.0 to -75.0, 75.0 as 1
+set arrow from -75.0, 75.0 to -75.0, 105.0 as 1
+set arrow from -75.0, 105.0 to -45.0, 105.0 as 1
+set arrow from -75.0, 75.0 to -75.0, 45.0 as 1
+set arrow from -75.0, 45.0 to -105.0, 45.0 as 1
+set arrow from -105.0, 45.0 to -105.0, 75.0 as 1
+set arrow from -105.0, 75.0 to -75.0, 75.0 as 1
+set arrow from 5.0, 30.0 to 5.0, -30.0 as 1
+set arrow from 5.0, -30.0 to -5.0, -30.0 as 1
+set arrow from -5.0, -30.0 to -5.0, 30.0 as 1
+set arrow from -5.0, 30.0 to 5.0, 30.0 as 1
+set obj rect from 25.4416410625, 126.495802141 to 31.4416410625, 132.495802141
+set obj rect from -32.1150408822, 167.835312317 to -26.1150408822, 173.835312317
+set obj rect from -1.53474544798, 161.097035966 to 4.46525455202, 167.097035966
+set obj rect from 11.391077401, 142.930851642 to 17.391077401, 148.930851642
+set obj rect from 25.8585633515, 167.38189968 to 31.8585633515, 173.38189968
+set obj rect from 19.9184298018, 157.78392226 to 25.9184298018, 163.78392226
+set obj rect from -18.0986441276, 167.397374232 to -12.0986441276, 173.397374232
+set obj rect from -10.5442681249, 157.608108471 to -4.54426812492, 163.608108471
+set obj rect from -17.6503059602, 108.113713175 to -11.6503059602, 114.113713175
+set obj rect from 37.5517607329, 130.090955155 to 43.5517607329, 136.090955155
+set obj rect from -4.89647079288, -174.186925676 to 1.10352920712, -168.186925676
+set obj rect from 4.87882181429, -198.665442818 to 10.8788218143, -192.665442818
+set obj rect from -46.4323403925, -186.750484628 to -40.4323403925, -180.750484628
+set obj rect from -23.0758836607, -152.849053904 to -17.0758836607, -146.849053904
+set obj rect from -24.2571304405, -187.094420053 to -18.2571304405, -181.094420053
+set obj rect from -66.6322713429, -173.895064577 to -60.6322713429, -167.895064577
+set obj rect from -57.0285574101, -186.733834323 to -51.0285574101, -180.733834323
+set obj rect from -7.29106509274, -137.750059799 to -1.29106509274, -131.750059799
+set obj rect from 47.7481910397, -171.17880412 to 53.7481910397, -165.17880412
+set obj rect from 49.9076095171, -153.529190343 to 55.9076095171, -147.529190343
+set obj rect from 168.013805315, 0.10949332886 to 174.013805315, 6.10949332886
+plot NaN notitle

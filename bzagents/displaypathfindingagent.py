@@ -29,7 +29,10 @@ from bzrc import BZRC, Command
 
 __travel_cost__ = 1
 
-__HEURISTIC__ = 5
+__HEURISTIC__ = 1
+
+debugMode = False 
+"""Debug mode makes astar display its output, rather than just path"""
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
@@ -255,9 +258,11 @@ class Agent(object):
                 print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
             if curNode.x == goal.x and curNode.y == goal.y:
                 break
-            for cha in [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]]:
-                print cha[0]
-                return
+            for cha in [[1, -1], [-1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [1, 0], [-1, 0]]:
+            # for cha in [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]]:
+                # print "!!!"
+                # print cha
+                # return
                 newx = curNode.x + cha[0] - self.occgrid[0][0]
                 newy = curNode.y + cha[1] - self.occgrid[0][1]
                 if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
@@ -402,12 +407,12 @@ class Agent(object):
             # pop cell from heap queue 
             f, cell = heapq.heappop(self.op)
             # add cell to closed list so we don't process it twice
-
-            if cell.parent != None:
-                print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
-            if time.time() - lastupdate > 0.1:
-                print "plot NaN notitle"
-                lastupdate = time.time()
+            if debugMode:
+                if cell.parent != None:
+                    print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
+                if time.time() - lastupdate > 0.1:
+                    print "plot NaN notitle"
+                    lastupdate = time.time()
 
             self.cl.add(cell)
             # if ending cell, display found path
@@ -522,7 +527,7 @@ class Grid():
         self.grid = []
 
         self.goal =  (int(self.bzrc.get_flags()[2].x), int(self.bzrc.get_flags()[2].y))
-        print "Goal: ", self.goal
+        # print "Goal: ", self.goal
         self.start = (int(self.bzrc.get_mytanks()[0].x), int(self.bzrc.get_mytanks()[0].y))
         # print "START: " , self.start
 
@@ -636,14 +641,16 @@ def main():
     #agent.test_occgrid()
     #agent.uniform_search(start, goal)
     #agent.greedy_search(start, goal)
-    #agent.depth_first(start, goal)
+    # agent.depth_first(start, goal)
     #agent.breadth_first(start, goal)
     #agent.iterative_search(start, goal)
+    
     path = agent.run(5)
     for i in range(len(path)):
         if i < len(path) - 1:
             print "set arrow from", str(path[i][0]) + ', ' + str(path[i][1]), "to ", str(path[i + 1][0]) + ', ' + str(path[i + 1][1]), "as 2"
     print "plot NaN notitle"
+    
     #print time.time() - prev_time
     return
 
