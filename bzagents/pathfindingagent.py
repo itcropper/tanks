@@ -41,12 +41,12 @@ class Agent(object):
         self.othertanks = self.bzrc.get_othertanks()
         self.occgrid = self.bzrc.get_occgrid(0)
         for tank in self.othertanks:
-            for cha in [(x, y) for x in range(-3, 4) for y in range(-3, 4) if (x, y) != (0, 0)]:
+            for cha in [(x, y) for x in range(-2, 3) for y in range(-2, 3) if (x, y) != (0, 0)]:
                 newx = int(tank.x) + cha[0] - self.occgrid[0][0]
                 newy = int(tank.y) + cha[1] - self.occgrid[0][1]
                 if newx >= 0 and newy >= 0 and newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][x]):
                     self.occgrid[1][newx][newy] = 1
-        self.grid = Grid(bzrc, self.occgrid)
+        self.grid = Grid(bzrc)
         self.op = []
         self.path = []
         heapq.heapify(self.op)
@@ -384,7 +384,7 @@ class Agent(object):
         @param adj adjacent cell to current cell
         @param cell current cell being processed
         """
-        adj.cost = cell.cost + math.sqrt((adj.x - cell.x)**2 + (adj.y - cell.y)**2) * __travel_cost__
+        adj.cost = self.cost(cell, adj)
         adj.heuristic = self.get_heuristic(adj)
         adj.parent = cell
         adj.value = adj.heuristic + adj.cost
@@ -401,12 +401,11 @@ class Agent(object):
             f, cell = heapq.heappop(self.op)
             # add cell to closed list so we don't process it twice
 
-            #print cell.end
-            #if cell.parent != None:
-            #    print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
-            #if time.time() - lastupdate > 0.1:
-            #    print "plot NaN notitle"
-            #    lastupdate = time.time()
+            # if cell.parent != None:
+            #     print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
+            # if time.time() - lastupdate > 0.1:
+            #     print "plot NaN notitle"
+            #     lastupdate = time.time()
 
             self.cl.add(cell)
             # if ending cell, display found path
@@ -423,7 +422,7 @@ class Agent(object):
                         # if adj cell in open list, check if current path is
                         # better than the one previously found for this adj
                         # cell.
-                        if c.cost > cell.cost + float(math.sqrt((c.x - cell.x)**2 + (c.y - cell.y)**2)) * __travel_cost__:
+                        if c.cost > self.cost(cell, c):
                             self.update_cell(c, cell)
 
                     else:
@@ -431,7 +430,32 @@ class Agent(object):
                         # add adj cell to open list
                         heapq.heappush(self.op, (c.value, c))
 
-    
+    def cost(self, cell1, cell2):
+        cell1adj = False
+        cell2adj = False
+        for cha in [(x, y) for x in range(-1, 2) for y in range(-1, 2) if (x, y) != (0, 0)]:
+            newx = cell1.x + cha[0] - self.occgrid[0][0]
+            newy = cell1.y + cha[1] - self.occgrid[0][1]
+            if self.in_range(newx, newy) and self.occgrid[1][newx][newy] == 1:
+                cell1adj = True
+            newx = cell2.x + cha[0] - self.occgrid[0][0]
+            newy = cell2.y + cha[1] - self.occgrid[0][1]
+            if self.in_range(newx, newy) and self.occgrid[1][newx][newy] == 1:
+                cell2adj = True
+
+        penalty = 1
+        if not cell1adj and cell2adj:
+            penalty = 1.3
+        if cell1adj and cell2adj:
+            penalty = 1.5
+        if cell1adj and not cell2adj:
+            penalty = 1.1
+
+        return cell1.cost + penalty * __travel_cost__ * math.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+
+
+    def in_range(self, x, y):
+        return x >= 0 and y >= 0 and x < len(self.occgrid[1]) and y < len(self.occgrid[1][x])
 
     def run(self, heuristic):
         __HEURISTIC__ = heuristic
@@ -464,9 +488,9 @@ class Cell():
 
 class Grid():
 
-    def __init__(self, bzrc, occgrid):
+    def __init__(self, bzrc):
         self.bzrc = bzrc
-        self.grid = occgrid
+        self.grid = self.bzrc.get_occgrid(0)
 
         #print self.grid
 
