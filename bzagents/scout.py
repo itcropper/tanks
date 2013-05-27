@@ -26,10 +26,52 @@ import time
 
 from bzrc import BZRC, Command
 
+#!/usr/bin/env python
+
+import OpenGL
+OpenGL.ERROR_CHECKING = False
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+from numpy import zeros
+
+grid = None
+
+def draw_grid():
+    # This assumes you are using a numpy array for your grid
+    width, height = grid.shape
+    glRasterPos2f(-1, -1)
+    glDrawPixels(width, height, GL_LUMINANCE, GL_FLOAT, grid)
+    glFlush()
+    glutSwapBuffers()
+
+def update_grid(new_grid):
+    global grid
+    grid = new_grid
+
+def init_window(width, height):
+    global window
+    global grid
+    grid = zeros((width, height))
+    glutInit(())
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH)
+    glutInitWindowSize(width, height)
+    glutInitWindowPosition(0, 0)
+    window = glutCreateWindow("Grid filter")
+    glutDisplayFunc(draw_grid)
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    # glutMainLoop()
+
+# vim: et sw=4 sts=4
+
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
 
     def __init__(self, bzrc):
+        print 'initting'
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
@@ -37,6 +79,7 @@ class Agent(object):
         self.occgrid = []
         for y in range(0, int(self.constants["worldsize"])):
             self.occgrid.append([Cell(x, y) for x in range(0, int(self.constants["worldsize"]))])
+        init_window(400, 400)
         # for y in self.occgrid:
         #     for x in y:
         #         print str(x.x) + ',' + str(x.y),
@@ -56,8 +99,9 @@ class Agent(object):
 
         # for tank in mytanks:
         #     self.attack_enemies(tank)
-
+        draw_grid()
         results = self.bzrc.do_commands(self.commands)
+
 
     def attack_enemies(self, tank):
         """Find the closest enemy and chase it, shooting as you go."""
