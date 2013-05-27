@@ -34,6 +34,14 @@ class Agent(object):
         self.constants = self.bzrc.get_constants()
         self.commands = []
 
+        self.occgrid = []
+        for y in range(0, int(self.constants["worldsize"])):
+            self.occgrid.append([Cell(x, y) for x in range(0, int(self.constants["worldsize"]))])
+        # for y in self.occgrid:
+        #     for x in y:
+        #         print str(x.x) + ',' + str(x.y),
+        #     print '\n',
+
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
@@ -46,8 +54,8 @@ class Agent(object):
 
         self.commands = []
 
-        for tank in mytanks:
-            self.attack_enemies(tank)
+        # for tank in mytanks:
+        #     self.attack_enemies(tank)
 
         results = self.bzrc.do_commands(self.commands)
 
@@ -84,6 +92,14 @@ class Agent(object):
         elif angle > math.pi:
             angle -= 2 * math.pi
         return angle
+
+class Cell(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.visited = 0
+        self.occCount = 0
+
 
 
 def main():
