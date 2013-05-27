@@ -79,10 +79,10 @@ class Agent(object):
         self.occgrid = []
         for y in range(0, int(self.constants["worldsize"])):
             self.occgrid.append([Cell(x, y) for x in range(0, int(self.constants["worldsize"]))])
-        init_window(400, 400)
-        for x in range(0, 400):
-            for y in range(0, 400):
-                grid[x][y] = (x / 400.0) ** 2 + (y / 400.0) ** 2
+        init_window(100, 100)
+        # for x in range(0, 400):
+        #     for y in range(0, 400):
+        #         grid[x][y] = (x / 400.0) ** 2 + (y / 400.0) ** 2
         # for y in self.occgrid:
         #     for x in y:
         #         print str(x.x) + ',' + str(x.y),
@@ -103,6 +103,10 @@ class Agent(object):
         # for tank in mytanks:
         #     self.attack_enemies(tank)
 
+        tempgrid = self.bzrc.get_occgrid(0)
+        for x in range(0, len(tempgrid[1])):
+            for y in range(0, len(tempgrid[1][x])):
+                grid[x][y] = tempgrid[1][y][x]
         draw_grid()
         results = self.bzrc.do_commands(self.commands)
 
