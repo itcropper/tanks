@@ -36,6 +36,7 @@ from OpenGL.GLU import *
 from numpy import zeros
 
 grid = None
+obsProp = 1.0 / 20.0
 
 def draw_grid():
     # This assumes you are using a numpy array for your grid
@@ -78,15 +79,8 @@ class Agent(object):
 
         self.occgrid = []
         for y in range(0, int(self.constants["worldsize"])):
-            self.occgrid.append([Cell(x, y) for x in range(0, int(self.constants["worldsize"]))])
+            self.occgrid.append([Cell() for x in range(0, int(self.constants["worldsize"]))])
         init_window(100, 100)
-        # for x in range(0, 400):
-        #     for y in range(0, 400):
-        #         grid[x][y] = (x / 400.0) ** 2 + (y / 400.0) ** 2
-        # for y in self.occgrid:
-        #     for x in y:
-        #         print str(x.x) + ',' + str(x.y),
-        #     print '\n',
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -103,10 +97,12 @@ class Agent(object):
         # for tank in mytanks:
         #     self.attack_enemies(tank)
 
+        # for tank in mytanks
+
         tempgrid = self.bzrc.get_occgrid(0)
         for x in range(0, len(tempgrid[1])):
             for y in range(0, len(tempgrid[1][x])):
-                grid[x][y] = tempgrid[1][y][x]
+                grid[y][x] = tempgrid[1][x][y]
         draw_grid()
         results = self.bzrc.do_commands(self.commands)
 
@@ -146,9 +142,7 @@ class Agent(object):
         return angle
 
 class Cell(object):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __init__(self):
         self.visited = 0
         self.occCount = 0
 
