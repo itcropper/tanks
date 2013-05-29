@@ -72,7 +72,6 @@ class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
 
     def __init__(self, bzrc):
-        print 'initting'
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
@@ -80,29 +79,49 @@ class Agent(object):
         self.occgrid = []
         for y in range(0, int(self.constants["worldsize"])):
             self.occgrid.append([Cell() for x in range(0, int(self.constants["worldsize"]))])
-        init_window(100, 100)
+
+        init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
+        self.constants["chanceTrue"] =  obsProp * float(self.constants["truepositive"]) / (obsProp * float(self.constants["truepositive"]) + (1 - obsProp) * (1 - float(self.constants["truenegative"])))
+        self.constants["chanceFalse"] = (1 - obsProp) * float(self.constants["truenegative"]) / ((1 - obsProp) * float(self.constants["truenegative"]) + obsProp * (1 - float(self.constants["truepositive"])))
+        
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        self.mytanks = mytanks
-        self.othertanks = othertanks
-        self.flags = flags
-        self.shots = shots
-        self.enemies = [tank for tank in othertanks if tank.color !=
-                        self.constants['team']]
-
+        # mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
+        # self.mytanks = mytanks
+        # self.othertanks = othertanks
+        # self.flags = flags
+        # self.shots = shots
+        # self.enemies = [tank for tank in othertanks if tank.color !=
+        #                 self.constants['team']]
+        return
         self.commands = []
 
         # for tank in mytanks:
         #     self.attack_enemies(tank)
 
         # for tank in mytanks
+        tank = mytanks[0]
 
-        tempgrid = self.bzrc.get_occgrid(0)
+        tempgrid = self.bzrc.get_occgrid(tank.index)
+        x = tank.x
+        y = tank.y
+        offsetx = x + int(self.constants["worldsize"]) / 2 - len(tempgrid[1]) / 2
+        if int(self.constants["worldsize"]) / 2 + x < len(tempgrid[1]) / 2:
+            offsetx = 0
+        if int(self.constants["worldsize"]) / 2 - x < len(tempgrid[1]) / 2:
+            offsetx = int(self.constants["worldsize"]) - len(tempgrid[1])
+        offsety = y + int(self.constants["worldsize"]) / 2 - len(tempgrid[1][0]) / 2
+        if int(self.constants["worldsize"]) / 2 + y < len(tempgrid[1][0]) / 2:
+            offsety = 0
+        if int(self.constants["worldsize"]) / 2 - y < len(tempgrid[1][0]) / 2:
+            offsety = int(self.constants["worldsize"]) - len(tempgrid[1][0])
+
+        # print tank.x, tank.y, offsetx, offsety, len(tempgrid[1])
+
         for x in range(0, len(tempgrid[1])):
             for y in range(0, len(tempgrid[1][x])):
-                grid[y][x] = tempgrid[1][x][y]
+                grid[offsety + y][offsetx + x] = tempgrid[1][x][y]
         draw_grid()
         results = self.bzrc.do_commands(self.commands)
 
