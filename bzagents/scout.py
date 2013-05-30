@@ -23,6 +23,7 @@
 import sys
 import math
 import time
+import random
 
 from bzrc import BZRC, Command
 
@@ -78,78 +79,108 @@ class Agent(object):
 
         self.occgrid = []
         for y in range(0, int(self.constants["worldsize"])):
-            self.occgrid.append([Cell() for x in range(0, int(self.constants["worldsize"]))])
+            self.occgrid.append([0.0 for x in range(0, int(self.constants["worldsize"]))])
+        self.visited = {}
+        for x in range(int(self.constants["worldsize"])):
+            for y in range(int(self.constants["worldsize"])):
+                self.visited[x, y] = 0
+
+        self.limit = 20 #CALCULATE THIS !!!
 
         init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
         self.constants["chanceTrue"] =  obsProp * float(self.constants["truepositive"]) / (obsProp * float(self.constants["truepositive"]) + (1 - obsProp) * (1 - float(self.constants["truenegative"])))
         self.constants["chanceFalse"] = (1 - obsProp) * float(self.constants["truenegative"]) / ((1 - obsProp) * float(self.constants["truenegative"]) + obsProp * (1 - float(self.constants["truepositive"])))
         
+        for x in range(len(grid)):
+            for y in range(len(grid[x])):
+                grid[x][y] = 0.5
+        self.lastPath = time.time()
+
+        mytanks = self.bzrc.get_mytanks()
+
+        self.tankDest = [(0, 0) for tank in mytanks]
+        self.tankHist = [[(0, 0) for x in range(5)] for tank in mytanks]
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        # mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        # self.mytanks = mytanks
-        # self.othertanks = othertanks
-        # self.flags = flags
-        # self.shots = shots
-        # self.enemies = [tank for tank in othertanks if tank.color !=
-        #                 self.constants['team']]
-        return
+        # self.uniform_search(self.bzrc.get_mytanks()[0])
+        # return
+        random.seed()
+        mytanks = self.bzrc.get_mytanks()
         self.commands = []
+        for tank in mytanks:
+            if (math.sqrt((self.tankDest[tank.index][0] - tank.x)**2 
+                + (self.tankDest[tank.index][1] - tank.y)**2) < 20 or
+                self.tankHist[tank.index][0] == self.tankHist[tank.index][4]):
+                if random.randint(0, 20) == 0:
+                    self.tankDest[tank.index] = (random.randint(-(int(self.constants["worldsize"]) / 2), (int(self.constants["worldsize"]) / 2)),
+                        random.randint(-(int(self.constants["worldsize"]) / 2), (int(self.constants["worldsize"]) / 2)))
+                else:
+                    tempkey = self.visited.keys()[random.randint(0, len(self.visited.keys()) - 1)]
+                    self.tankDest[tank.index] = (tempkey[0] - int(self.constants["worldsize"]) / 2, 
+                        tempkey[1] - int(self.constants["worldsize"]) / 2)
+            self.tankHist[tank.index].pop(0)
+            self.tankHist[tank.index].append((tank.x, tank.y))
+            self.move_to_position(tank, self.tankDest[tank.index][0], self.tankDest[tank.index][1])
+            tempgrid = self.bzrc.get_occgrid(tank.index)
 
-        # for tank in mytanks:
-        #     self.attack_enemies(tank)
-
-        # for tank in mytanks
-        tank = mytanks[0]
-
-        tempgrid = self.bzrc.get_occgrid(tank.index)
-        x = tank.x
-        y = tank.y
-        offsetx = x + int(self.constants["worldsize"]) / 2 - len(tempgrid[1]) / 2
-        if int(self.constants["worldsize"]) / 2 + x < len(tempgrid[1]) / 2:
-            offsetx = 0
-        if int(self.constants["worldsize"]) / 2 - x < len(tempgrid[1]) / 2:
-            offsetx = int(self.constants["worldsize"]) - len(tempgrid[1])
-        offsety = y + int(self.constants["worldsize"]) / 2 - len(tempgrid[1][0]) / 2
-        if int(self.constants["worldsize"]) / 2 + y < len(tempgrid[1][0]) / 2:
-            offsety = 0
-        if int(self.constants["worldsize"]) / 2 - y < len(tempgrid[1][0]) / 2:
-            offsety = int(self.constants["worldsize"]) - len(tempgrid[1][0])
-
-        # print tank.x, tank.y, offsetx, offsety, len(tempgrid[1])
-
-        for x in range(0, len(tempgrid[1])):
-            for y in range(0, len(tempgrid[1][x])):
-                grid[offsety + y][offsetx + x] = tempgrid[1][x][y]
+            offsetx = tempgrid[0][0] + int(self.constants["worldsize"]) / 2
+            offsety = tempgrid[0][1] + int(self.constants["worldsize"]) / 2
+            for x in range(0, len(tempgrid[1])):
+                for y in range(0, len(tempgrid[1][x])):
+                    if (x, y) in self.visited:
+                        self.visited[x, y] += 1
+                        if self.visited[x, y] > self.limit:
+                            del self.visited[x, y]
+                    if tempgrid[1][x][y]:
+                        self.occgrid[offsety + y][offsetx + x] += self.constants["chanceTrue"]
+                    else:
+                        self.occgrid[offsety + y][offsetx + x] -= self.constants["chanceFalse"]
+                    if self.occgrid[offsety + y][offsetx + x] < 0:
+                        grid[offsety + y][offsetx + x] = 0
+                    else:
+                        grid[offsety + y][offsetx + x] = 1
         draw_grid()
         results = self.bzrc.do_commands(self.commands)
 
+    # def uniform_search(self, start):
+    #     ToVisit = [Node(int(start.x) + int(self.constants["worldsize"])  / 2, int(start.y) + int(self.constants["worldsize"]) / 2, 0, None)]
+    #     Visited = {}
+    #     curNode = None
+    #     lastUpdate = time.time()
+    #     while len(ToVisit) > 0:
+    #         curNode = ToVisit[0]
+    #         lowi = 0
+    #         for i in range(len(ToVisit)):
+    #             if ToVisit[i].d < curNode.d:
+    #                 lowi = i
+    #                 curNode = ToVisit[i]
 
-    def attack_enemies(self, tank):
-        """Find the closest enemy and chase it, shooting as you go."""
-        best_enemy = None
-        best_dist = 2 * float(self.constants['worldsize'])
-        for enemy in self.enemies:
-            if enemy.status != 'alive':
-                continue
-            dist = math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2)
-            if dist < best_dist:
-                best_dist = dist
-                best_enemy = enemy
-        if best_enemy is None:
-            command = Command(tank.index, 0, 0, False)
-            self.commands.append(command)
-        else:
-            self.move_to_position(tank, best_enemy.x, best_enemy.y)
+    #         curNode = ToVisit.pop(lowi)
+    #         grid[curNode.y][curNode.x] = 0.9 #Draw-ing
+    #         if(curNode.d > 50): # Distance Limit
+    #             break
+    #         for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+    #             newx = curNode.x + cha[0]
+    #             newy = curNode.y + cha[1]
+    #             if(newy < len(grid) and newx < len(grid[newx]) and newx >= 0 and newy >= 0):
+    #                 if grid[newy][newx] != 1 and (curNode.x + cha[0], curNode.y + cha[1]) not in Visited:
+    #                     newVisit = Node(curNode.x + cha[0], curNode.y + cha[1], curNode.d + math.sqrt(cha[0] ** 2 + cha[1] ** 2),
+    #                     curNode)
+    #                     Visited[newVisit.x, newVisit.y] = newVisit
+    #                     ToVisit.append(newVisit)
+    #     draw_grid()
 
     def move_to_position(self, tank, target_x, target_y):
         """Set command to move to given coordinates."""
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, True)
+        speed = math.sqrt((tank.x - target_x) ** 2 + (tank.y - target_y) ** 2) / 80
+        # speed = .05 if math.sqrt((tank.x - target_x) ** 2 + (tank.y - target_y) ** 2) < 20 else 1
+        command = Command(tank.index, speed, 2 * relative_angle, False)
         self.commands.append(command)
+        # print '(' + str(tank.x) + ', ' + str(tank.y) + ')\t' + '(' + str(target_x) + ', ' + str(target_y) + ')'
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
@@ -160,12 +191,12 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
-class Cell(object):
-    def __init__(self):
-        self.visited = 0
-        self.occCount = 0
-
-
+class Node(object):
+    def __init__(self, x, y, distance, parent):
+        self.x = x
+        self.y = y
+        self.d = distance
+        self.parent = parent
 
 def main():
     # Process CLI arguments.
