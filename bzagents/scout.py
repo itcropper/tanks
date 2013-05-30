@@ -85,7 +85,7 @@ class Agent(object):
             for y in range(int(self.constants["worldsize"])):
                 self.visited[x, y] = 0
 
-        self.limit = 20 #CALCULATE THIS !!!
+        self.limit = 20#This is the threshold of visits before we are certain of a value !!!
 
         init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
         self.constants["chanceTrue"] =  obsProp * float(self.constants["truepositive"]) / (obsProp * float(self.constants["truepositive"]) + (1 - obsProp) * (1 - float(self.constants["truenegative"])))
@@ -99,7 +99,7 @@ class Agent(object):
         mytanks = self.bzrc.get_mytanks()
 
         self.tankDest = [(0, 0) for tank in mytanks]
-        self.tankHist = [[(0, 0) for x in range(5)] for tank in mytanks]
+        self.tankHist = [[(0, 0) for x in range(3)] for tank in mytanks]
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -132,7 +132,7 @@ class Agent(object):
                         self.visited[x, y] += 1
                         if self.visited[x, y] > self.limit:
                             del self.visited[x, y]
-                    if tempgrid[1][x][y]:
+                    if tempgrid[1][x][y]:#Here's where the probability comes into play - !!!
                         self.occgrid[offsety + y][offsetx + x] += self.constants["chanceTrue"]
                     else:
                         self.occgrid[offsety + y][offsetx + x] -= self.constants["chanceFalse"]
