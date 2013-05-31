@@ -108,6 +108,8 @@ class Agent(object):
         random.seed()
         mytanks = self.bzrc.get_mytanks()
         self.commands = []
+        if len(self.visited) == 0:
+            return
         for tank in mytanks:
             if (math.sqrt((self.tankDest[tank.index][0] - tank.x)**2 
                 + (self.tankDest[tank.index][1] - tank.y)**2) < 20 or
@@ -128,34 +130,33 @@ class Agent(object):
             offsety = tempgrid[0][1] + int(self.constants["worldsize"]) / 2
             for x in range(0, len(tempgrid[1])):
                 for y in range(0, len(tempgrid[1][x])):
-                    if (x, y) in self.visited:
-                        self.visited[x, y] += 1
-                        if self.visited[x, y] > self.limit:
-                            del self.visited[x, y]
-                            
-                        PofSGivenO = float(self.constants["truepositive"])
-                        PofSGivenNotO = 1.0 -PofSGivenO
-                        PofS = grid[offsety + y][offsetx + x]
-                        PofNotSGivenO = 1.0 - float(self.constants["truenegative"])
-                        PofNotSGivenNotO = float(self.constants["truenegative"])
-						
-                        #print PofSGivenO,PofSGivenNotO,"\n",PofNotSGivenNotO, PofNotSGivenO,'\n',PofS
-						
-					   # return
-						
-                        probability = .5
-						
-						#print tempgrid[1][x][y]
-						#return
-						
-                        if tempgrid[1][x][y] == 1:
-                             #print "taken"
-                             probability = (PofSGivenO * PofS) / ((PofSGivenO * PofS + PofNotSGivenO * (1.0 - PofS)))
-                        else:
-                             #print "open"
-                             probability = (PofSGivenNotO * PofS) / ((PofSGivenNotO * PofS + PofNotSGivenNotO * (1.0 - PofS)))
-                        grid[offsety + y][offsetx + x] = probability
-						
+                    # if (offsetx + x, offsety + y) in self.visited:
+                    
+                    PofSGivenO = float(self.constants["truepositive"])
+                    PofSGivenNotO = 1.0 -PofSGivenO
+                    PofS = grid[offsety + y][offsetx + x]
+                    PofNotSGivenO = 1.0 - float(self.constants["truenegative"])
+                    PofNotSGivenNotO = float(self.constants["truenegative"])
+					
+                    #print PofSGivenO,PofSGivenNotO,"\n",PofNotSGivenNotO, PofNotSGivenO,'\n',PofS
+					
+				   # return
+					
+                    probability = .5
+					
+					#print tempgrid[1][x][y]
+					#return
+					
+                    if tempgrid[1][x][y] == 1:
+                         #print "taken"
+                         probability = (PofSGivenO * PofS) / ((PofSGivenO * PofS + PofNotSGivenO * (1.0 - PofS)))
+                    else:
+                         #print "open"
+                         probability = (PofSGivenNotO * PofS) / ((PofSGivenNotO * PofS + PofNotSGivenNotO * (1.0 - PofS)))
+                    grid[offsety + y][offsetx + x] = probability
+                    if min(probability, 1 - probability) < 0.0001 and (offsety + x, offsety + y) in self.visited:
+                         del self.visited[offsety + x, offsety + y]
+
         draw_grid()
         results = self.bzrc.do_commands(self.commands)
 
