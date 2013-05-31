@@ -27,7 +27,7 @@ import heapq
 
 from bzrc import BZRC, Command
 
-__travel_cost__ = 5
+__travel_cost__ = 1
 
 __HEURISTIC__ = 1
 
@@ -226,7 +226,7 @@ class Agent(object):
                     print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
                 if curNode.x == goal.x and curNode.y == goal.y:
                     break
-                for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+                for cha in [(x, y) for x in range(-1, 2) for y in range(-1, 2) if (x, y) != (0, 0)]:
                     newx = curNode.x + cha[0] - self.occgrid[0][0]
                     newy = curNode.y + cha[1] - self.occgrid[0][1]
                     if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
@@ -244,25 +244,36 @@ class Agent(object):
         print 'plot NaN notitle'
 
     def depth_first(self, start, goal):
-        ToVisit = [Node(int(start.x), int(start.y), 0,
-            math.sqrt((int(start.x) - int(goal.x)) ** 2 + (int(start.y) - int(goal.y)) ** 2), None)]
+		
+        first = Node(int(start.x), int(start.y), 0,
+            math.sqrt((int(start.x) - int(goal.x)) ** 2 + (int(start.y) - int(goal.y)) ** 2), None)
+		
+        ToVisit = []
         Visited = {}
-        curNode = None
+        ToVisit.append(first)
         lastupdate = time.time()
-        while len(ToVisit) > 0:
+        #print goal.x, goal.y
+        #print curNode.x, curNode.y, "----------------------------------------"
+        while len(ToVisit) != 0:
             curNode = ToVisit.pop()
+            Visited[(curNode.x, curNode.y)] = curNode
             if curNode.parent != None:
                 print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
             if curNode.x == goal.x and curNode.y == goal.y:
                 break
-            for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+            #[1, -1],[-1, -1],[1,1],[-1, 1],[0,-1],[0,1],[1,0],[-1,0]    
+            #for cha in [(x, y) for x in range(-1, 2) for y in range(-1, 2) if (x, y) != (0, 0)]:
+            for cha in [[1, -1],[-1, -1],[1,1],[-1, 1],[0,-1],[0,1],[1,0],[-1,0] ]:
                 newx = curNode.x + cha[0] - self.occgrid[0][0]
                 newy = curNode.y + cha[1] - self.occgrid[0][1]
                 if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
-                    if self.occgrid[1][newx][newy] == 0 and (curNode.x + cha[0], curNode.y + cha[1]) not in Visited:
-                        newVisit = Node(curNode.x + cha[0], curNode.y + cha[1], 0, 0, curNode)
-                        Visited[newVisit.x, newVisit.y] = newVisit
+                    if self.occgrid[1][newx][newy] == 0 and not (curNode.x + cha[0], curNode.y + cha[1]) in Visited.keys():
+                        newVisit = Node(curNode.x + cha[0], curNode.y + cha[1] , 0, 0, curNode)
+                        
+                        #curNode = newVisit
                         ToVisit.append(newVisit)
+                        #break
+
             if time.time() - lastupdate > 0.2:
                 print 'plot NaN notitle'
                 lastupdate = time.time()
@@ -283,7 +294,7 @@ class Agent(object):
                 print 'set arrow from ', str(curNode.parent.x) + ', ' + str(curNode.parent.y), 'to', str(curNode.x) + ', ' + str(curNode.y), 'as 1'
             if curNode.x == goal.x and curNode.y == goal.y:
                 break
-            for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+            for cha in [(x, y) for x in range(-1, 2) for y in range(-1, 2) if (x, y) != (0, 0)]:
                 newx = curNode.x + cha[0] - self.occgrid[0][0]
                 newy = curNode.y + cha[1] - self.occgrid[0][1]
                 if(newx < len(self.occgrid[1]) and newy < len(self.occgrid[1][newx]) and newx >= 0 and newy >= 0):
@@ -395,17 +406,20 @@ class Agent(object):
         heapq.heappush(self.op, (self.start.value, self.start))
         #print "Start and Goal: ",(self.start.x, self.start.y), (self.end.x, self.end.y)
         lastupdate = time.time()
+        #print self.end.x, self.end.y, "---------------------------------------------"
+        
+        
         while len(self.op):
             #print "GOT IN THE LOOP"
             # pop cell from heap queue 
             f, cell = heapq.heappop(self.op)
             # add cell to closed list so we don't process it twice
 
-            # if cell.parent != None:
-            #     print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
-            # if time.time() - lastupdate > 0.1:
-            #     print "plot NaN notitle"
-            #     lastupdate = time.time()
+            #if cell.parent != None:
+            #    print "set arrow from", str(cell.x) + ', ' + str(cell.y), "to ", str(cell.parent.x) + ', ' + str(cell.parent.y), "as 1"
+            if time.time() - lastupdate > 0.1:
+                print "plot NaN notitle"
+                lastupdate = time.time()
 
             self.cl.add(cell)
             # if ending cell, display found path
@@ -422,7 +436,7 @@ class Agent(object):
                         # if adj cell in open list, check if current path is
                         # better than the one previously found for this adj
                         # cell.
-                        if c.cost > self.cost(cell, c):
+                        if c.cost > self.cost(cell, c) + f:
                             self.update_cell(c, cell)
 
                     else:
@@ -450,8 +464,9 @@ class Agent(object):
             penalty = 1.5
         if cell1adj and not cell2adj:
             penalty = 1.1
-
-        return cell1.cost + penalty * __travel_cost__ * math.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+            
+            
+        return cell1.cost + penalty + math.sqrt(2) + __travel_cost__ if cell1.x != cell2.x and cell1.y !=cell2.y  else cell1.cost + penalty + __travel_cost__
 
 
     def in_range(self, x, y):
@@ -519,7 +534,7 @@ class Grid():
         self.grid = []
 
         self.goal =  (int(self.bzrc.get_flags()[2].x), int(self.bzrc.get_flags()[2].y))
-        # print "Goal: ", self.goal
+        #print "Goal: ", self.goal, "---------------------------------------------------------"
         self.start = (int(self.bzrc.get_mytanks()[0].x), int(self.bzrc.get_mytanks()[0].y))
         # print "START: " , self.start
 
@@ -531,6 +546,8 @@ class Grid():
     def get_grid(self):
 
         xList = []
+        
+        #print self.left, self.top, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
         
         for x in range(self.height):
             #g = raw_input(self.number_grid[y])
@@ -546,9 +563,11 @@ class Grid():
                     reachable = True
                     #print "reachable at: " + str(x) + " : " + str(y)
 
-                cell = Cell(self.left + x, self.bottom + y, reachable, self.distance(self.left + x, self.right + y, self.goal))
+                cell = Cell(self.left + x, self.bottom + y, reachable, self.distance(self.left + x, self.bottom + y, self.goal))
                 
-                if (self.left + x, self.top + y) == self.goal:
+                if (self.left + x, self.bottom + y) == self.goal:
+                    #print "bottom: ", self.bottom, "\nleft: ", self.left, "\nX: ", x, "\nY: ", y, "\nself.left + x: ", self.left + x, "\nself.bottom + y: ", self.bottom + y
+                    #s = raw_input()
                     cell.end = True
 
                 #s = raw_input("Goal Location: " + str(x + self.left) + " : " + str(y + self.bottom) + " : " + str(self.number_grid[y][x]))
@@ -559,8 +578,28 @@ class Grid():
             xList.append(yList)
 
         #print len(yList), len(xList)
+        
+        
+
 
         self.grid = xList
+        
+        for tank in self.bzrc.get_othertanks():
+            x = tank.x
+            y = tank.y
+		
+            self.get_cell(x+1, y+1).reachable = False
+            self.get_cell(x+1, y).reachable = False
+            self.get_cell(x+1, y-1).reachable = False
+            self.get_cell(x-1, y+1).reachable = False
+            self.get_cell(x-1, y).reachable = False
+            self.get_cell(x-1, y-1).reachable = False
+            self.get_cell(x, y+1).reachable = False
+            self.get_cell(x, y-1).reachable = False
+            self.get_cell(x, y).reachable = False
+            
+            #print x, y, tank.color
+            #s = raw_input()
 
         return y
                 
@@ -606,6 +645,7 @@ class Node(object):
         self.h = heuristic
         self.d = distance
         self.parent = parent
+        self.visited = False
 
 def main():
     # Process CLI arguments.
@@ -636,12 +676,12 @@ def main():
     #agent.depth_first(start, goal)
     #agent.breadth_first(start, goal)
     #agent.iterative_search(start, goal)
-    path = agent.run(agent.get_heuristic)
+    path = agent.run(1)
     for i in range(len(path)):
         if i < len(path) - 1:
             print "set arrow from", str(path[i][0]) + ', ' + str(path[i][1]), "to ", str(path[i + 1][0]) + ', ' + str(path[i + 1][1]), "as 2"
     print "plot NaN notitle"
-    #print time.time() - prev_time
+    print time.time() - prev_time
     return
 
     
