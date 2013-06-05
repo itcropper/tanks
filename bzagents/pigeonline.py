@@ -40,18 +40,13 @@ class Agent(object):
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        self.mytanks = mytanks
-        self.othertanks = othertanks
-        self.flags = flags
-        self.shots = shots
-        self.enemies = [tank for tank in othertanks if tank.color !=
-                        self.constants['team']]
-
         self.commands = []
-
+        mytanks = self.bzrc.get_mytanks()
         for tank in mytanks:
-            
+            if math.sqrt((self.target[tank.index][0] - tank.x)**2 + (self.target[tank.index][1] - tank.y)**2) < 20:
+                self.target[tank.index][0] = -self.target[tank.index][0]
+                self.target[tank.index][1] = -self.target[tank.index][1]
+            self.move_to_position(tank, self.target[tank.index][0], self.target[tank.index][1])
 
         results = self.bzrc.do_commands(self.commands)
 
@@ -60,7 +55,7 @@ class Agent(object):
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, True)
+        command = Command(tank.index, 1, 2 * relative_angle, False)
         self.commands.append(command)
 
     def normalize_angle(self, angle):
