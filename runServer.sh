@@ -10,5 +10,5 @@
 
 #./bin/bzrflag --window-size 600x600 --world-size=800 --world=maps/four_ls.bzw --occgrid-width=1600 --seed=1 --red-tanks=1 --green-tanks=1
 #./bin/bzrflag --window-size 600x600 --world=maps/empty.bzw --world-size=800 --red-tanks=1 --green-tanks=1 --blue-tanks=1 --purple-tanks=1 
-./bin/bzrflag --window-size 600x600 --world=maps/small_empty.bzw --world-size=400 --red-tanks=1 --green-tanks=1 --blue-tanks=1 --purple-tanks=1 
+./bin/bzrflag --window-size 600x600 --world=maps/small_empty.bzw --world-size=400 --default-posnoise=5 --red-tanks=1 --green-tanks=1 --blue-tanks=1 --purple-tanks=1 
 

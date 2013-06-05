@@ -28,7 +28,7 @@ from bzrc import BZRC, Command
 
 class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
-
+    
     def __init__(self, bzrc):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
