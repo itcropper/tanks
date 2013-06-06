@@ -87,30 +87,38 @@ class Agent(object):
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        # self.constants["shotspeed"]
         tank = self.bzrc.get_mytanks()[0]
         shots = self.bzrc.get_shots()
         self.commands = []
         
         enemytanks = self.bzrc.get_othertanks()
+        #Check to see if all enemy tanks are dead and, if they are, return
+        if len([t for t in enemytanks if t.status == 'alive']) == 0
+            return
+        #If our target is dead or uninitialized, find a live tank
         while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
             self.targetindex = int(random() * len(enemytanks))
 
         updateKalman(enemytanks[self.targetindex])
+
+        #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
+        predictedcoord = (0, 0)
         for i in range(5):
-            coord = predict(dtime)
-            dtime = math.sqrt((coord[0] - tank.x)**2 + (coord[1] - tank.y)**2) / self.constants["shotspeed"]
+            #For greater precision, increase the range, thereby increasing the number of predictions
+            predictedcoord = predict(dtime)
+            dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / self.constants["shotspeed"]
 
         self.shoot(tank, coord[0], coord[1])
 
+        #Display stuff
         self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
         for enemy in enemytanks:
             self.draw_x(enemy.x + int(self.constants["worldsize"]) / 2, enemy.y + int(self.constants["worldsize"]) / 2, 10, 0)
         for shot in shots:
             self.draw_x(shot.x + int(self.constants["worldsize"]) / 2, shot.y + int(self.constants["worldsize"]) / 2, 5, 0)
         draw_grid()
-
+        #Clear the display
         while len(self.colored) > 0:
             coord = self.colored.pop()
             grid[coord[0]][coord[1]] = 1
