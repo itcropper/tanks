@@ -74,6 +74,7 @@ class Agent(object):
     def __init__(self, bzrc):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
+
         self.commands = []
         self.colored = []
         self.targetindex = -1
@@ -86,8 +87,7 @@ class Agent(object):
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        # self.uniform_search(self.bzrc.get_mytanks()[0])
-        # return
+        # self.constants["shotspeed"]
         tank = self.bzrc.get_mytanks()[0]
         shots = self.bzrc.get_shots()
         self.commands = []
@@ -96,7 +96,13 @@ class Agent(object):
         while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
             self.targetindex = int(random() * len(enemytanks))
 
-        self.shoot(tank, enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
+        updateKalman(enemytanks[self.targetindex])
+        dtime = 0
+        for i in range(5):
+            coord = predict(dtime)
+            dtime = math.sqrt((coord[0] - tank.x)**2 + (coord[1] - tank.y)**2) / self.constants["shotspeed"]
+
+        self.shoot(tank, coord[0], coord[1])
 
         self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
         for enemy in enemytanks:
@@ -109,16 +115,22 @@ class Agent(object):
             coord = self.colored.pop()
             grid[coord[0]][coord[1]] = 1
 
-        # self.commands.append(Command(tank.index, 0, 0, True))
-
         results = self.bzrc.do_commands(self.commands)
+
+    def updateKalman(self, tank):
+        pass
+
+    def predict(self, time_diff):
+        x = 0
+        y = 0
+
+        return (x, y)
 
     def shoot(self, tank, x, y):
         angleTol = math.atan2(3, math.sqrt((x - tank.x)**2 + (y - tank.y)**2))
-        if abs(math.atan2(y - tank.y, x - tank.x) - tank.angle) < angleTol:
-            self.commands.append(Command(tank.index, 0, 0, True))
-        else:
-            self.commands.append(Command(tank.index, 0, 1.5 * self.normalize_angle(math.atan2(y - tank.y, x - tank.x) - tank.angle), False))
+        self.commands.append(Command(tank.index, 0, 
+            1.5 * self.normalize_angle(math.atan2(y - tank.y, x - tank.x) - tank.angle), 
+            abs(math.atan2(y - tank.y, x - tank.x) - tank.angle) < angleTol))
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
