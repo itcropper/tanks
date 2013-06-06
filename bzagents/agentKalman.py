@@ -53,7 +53,14 @@ class Agent(object):
         self.constants = self.bzrc.get_constants()
         self.commands = []
 
+        self.colored = []
+        self.targetindex = -1
+
         init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
+        for x in range(len(grid)):
+            for y in range(len(grid[x])):
+                grid[x][y] = 1
+
         
         self.mu=np.matrix([[0],
                            [0],
@@ -100,29 +107,58 @@ class Agent(object):
 
         self.Zt = np.matrix([[0, 0]])
 
-
-
-
-        for x in range(len(grid)):
-            for y in range(len(grid[x])):
-                grid[x][y] = 0.5
-
     def setEpZ(self, variance):
         self.epZ = np.matrix([[variance**2, 0],
                               [0, variance**2]])
 
     def update_X(self):
-        self.Xt = self.Xt / LA.norm(self.F * self.Xt, self.epsilon)
+        self.Xt = self.Xt / LA.norm(self.F * self.Xt, self.epsilon)#!!! Pick up here; we're updating the kalman filter every tick
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        # self.uniform_search(self.bzrc.get_mytanks()[0])
-        # return
-        mytanks = self.bzrc.get_mytanks()
+        tank = self.bzrc.get_mytanks()[0]
+        shots = self.bzrc.get_shots()
         self.commands = []
+        
+        enemytanks = self.bzrc.get_othertanks()
+        #Check to see if all enemy tanks are dead and, if they are, return
+        if len([t for t in enemytanks if t.status == 'alive']) == 0
+            return
+        #If our target is dead or uninitialized, find a live tank
+        while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
+            self.targetindex = int(random() * len(enemytanks))
 
+        self.updateKalman(enemytanks[self.targetindex], time_diff)
+
+        #This part iteratively approaches the ideal angle at which to fire at the tank
+        dtime = 0
+        predictedcoord = (0, 0)
+        for i in range(5):
+            #For greater precision, increase the range, thereby increasing the number of predictions
+            predictedcoord = self.predict(dtime)
+            dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / self.constants["shotspeed"]
+
+        self.shoot(tank, coord[0], coord[1])
+
+        #Display stuff
+        self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
+        for enemy in enemytanks:
+            self.draw_x(enemy.x + int(self.constants["worldsize"]) / 2, enemy.y + int(self.constants["worldsize"]) / 2, 10, 0)
+        for shot in shots:
+            self.draw_x(shot.x + int(self.constants["worldsize"]) / 2, shot.y + int(self.constants["worldsize"]) / 2, 5, 0)
         draw_grid()
+        #Clear the display
+        while len(self.colored) > 0:
+            coord = self.colored.pop()
+            grid[coord[0]][coord[1]] = 1
+
         results = self.bzrc.do_commands(self.commands)
+
+    def shoot(self, tank, x, y):
+        angleTol = math.atan2(3, math.sqrt((x - tank.x)**2 + (y - tank.y)**2))
+        self.commands.append(Command(tank.index, 0, 
+            1.5 * self.normalize_angle(math.atan2(y - tank.y, x - tank.x) - tank.angle), 
+            abs(math.atan2(y - tank.y, x - tank.x) - tank.angle) < angleTol))
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
@@ -133,6 +169,56 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
+    def draw_circle(self, x, y, radius, color):
+        for theta in drange(0, 2 * math.pi, 1.0 / (2 * radius * math.pi)):
+            newx = round(x + math.cos(theta) * radius)
+            newy = round(y + math.sin(theta) * radius)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+
+    def draw_x(self, x, y, radius, color):
+        for change in drange(0, radius / math.sqrt(2), 1):
+            newx = round(x + change)
+            newy = round(y + change)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+            newx = round(x + change)
+            newy = round(y - change)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+            newx = round(x - change)
+            newy = round(y + change)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+            newx = round(x - change)
+            newy = round(y - change)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+        
+    def updateKalman(self, tank, time_diff):
+        update_X()
+        # self.Xt = np.matrix([tank.x],
+        #                     [0],
+        #                     [0],
+        #                     [tank.y],
+        #                     [0],
+        #                     [0])
+
+    def predict(self, time_diff):
+        x = 0
+        y = 0
+
+        return (x, y)
 
     def updateZt(self):
         self.Zt = self.Zt/LA.norm(self.H * self.Xt, self.epZ)
@@ -149,6 +235,12 @@ class Agent(object):
     def nextEps(self, deltaT):
         return (self.mu.I - self.nextK(deltaT) * self.H )* (self.F(deltaT, .1)*self.epsilon * np.transpose(self.F(deltaT, .1)) + self.epsilon)
 
+
+def drange(start, stop, step):
+    r = start
+    while r < stop:
+        yield r
+        r += step
 
 def main():
     # Process CLI arguments.
@@ -177,11 +269,12 @@ def main():
         t = True
         while t:
             time_diff = time.time() - prev_time
+            prev_time = time.time()
             agent.tick(time_diff)
-            print agent.nextEps(time_diff)
+            # print agent.nextEps(time_diff)
 
             #print agent.fMatrix(time.time(), prev_time, .1)
-            t = False
+            # t = False
 
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."

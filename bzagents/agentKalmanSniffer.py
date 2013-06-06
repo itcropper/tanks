@@ -99,14 +99,14 @@ class Agent(object):
         while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
             self.targetindex = int(random() * len(enemytanks))
 
-        updateKalman(enemytanks[self.targetindex])
+        self.updateKalman(enemytanks[self.targetindex])
 
         #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
         predictedcoord = (0, 0)
         for i in range(5):
             #For greater precision, increase the range, thereby increasing the number of predictions
-            predictedcoord = predict(dtime)
+            predictedcoord = self.predict(dtime)
             dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / self.constants["shotspeed"]
 
         self.shoot(tank, coord[0], coord[1])
