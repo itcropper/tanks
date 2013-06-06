@@ -23,7 +23,7 @@
 import sys
 import math
 import time
-import random
+from random import random
 
 from bzrc import BZRC, Command
 
@@ -76,6 +76,7 @@ class Agent(object):
         self.constants = self.bzrc.get_constants()
         self.commands = []
         self.colored = []
+        self.targetindex = -1
 
         init_window(int(self.constants["worldsize"]), int(self.constants["worldsize"]))
         
@@ -88,9 +89,14 @@ class Agent(object):
         # self.uniform_search(self.bzrc.get_mytanks()[0])
         # return
         tank = self.bzrc.get_mytanks()[0]
-        enemytanks = self.bzrc.get_othertanks()
         shots = self.bzrc.get_shots()
         self.commands = []
+        
+        enemytanks = self.bzrc.get_othertanks()
+        while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
+            self.targetindex = int(random() * len(enemytanks))
+
+        self.shoot(tank, enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
 
         self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
         for enemy in enemytanks:
@@ -103,9 +109,16 @@ class Agent(object):
             coord = self.colored.pop()
             grid[coord[0]][coord[1]] = 1
 
-        self.commands.append(Command(tank.index, 0, 0, True))
+        # self.commands.append(Command(tank.index, 0, 0, True))
 
         results = self.bzrc.do_commands(self.commands)
+
+    def shoot(self, tank, x, y):
+        angleTol = math.atan2(3, math.sqrt((x - tank.x)**2 + (y - tank.y)**2))
+        if abs(math.atan2(y - tank.y, x - tank.x) - tank.angle) < angleTol:
+            self.commands.append(Command(tank.index, 0, 0, True))
+        else:
+            self.commands.append(Command(tank.index, 0, 1.5 * self.normalize_angle(math.atan2(y - tank.y, x - tank.x) - tank.angle), False))
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
