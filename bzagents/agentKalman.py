@@ -49,6 +49,9 @@ class Agent(object):
     """Class handles all command and control logic for a teams tanks."""
 
     def __init__(self, bzrc):
+
+        self.mu_timer = 0
+
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
@@ -76,31 +79,30 @@ class Agent(object):
                              [0],
                              [0]])
 
-        self.F = lambda delta    :np.matrix([[1, delta/2, delta**2/2,     0,        0,          0],
-                                             [0,       1,      delta,     0,        0,          0],
-                                             [0,     -.1,          1,     0,        0,          0],
-                                             [0,       0,          0,     1,    delta, delta**2/2],
-                                             [0,       0,          0,     0,        1,      delta],
-                                             [0,       0,          0,     0,      -.1,          1]])
+        self.F = lambda delta    :np.matrix([[1, delta/2, delta**2/2,     0.0,        0.0,          0.0],
+                                             [0.0,       1,      delta,     0.0,        0.0,          0.0],
+                                             [0.0,     -.1,          1,     0.0,        0.0,          0.0],
+                                             [0.0,       0.0,          0.0,     1,    delta, delta**2/2],
+                                             [0.0,       0.0,          0.0,     0.0,        1,      delta],
+                                             [0.0,       0.0,          0.0,     0.0,      -.1,          1]])
 
-        pCert = .1
-        vCert = 5
-        aCert = 40
+        pCert = 0.1
+        vCert = 5.0
+        aCert = 40.0
 
-        self.epsilon  =  np.matrix([[pCert,0,  0,   0,   0,   0],
-                                    [0,vCert,  0,   0,   0,   0],
-                                    [0,  0,aCert,   0,   0,   0],
-                                    [0,  0,  0, pCert,   0,   0],
-                                    [0,  0,  0,   0, vCert,   0],
-                                    [0,  0,  0,   0,   0, aCert]])
+        self.epsilon  =  np.matrix([[pCert,0.0,  0.0,   0.0,   0.0,   0.0],
+                                    [0.0,vCert,  0.0,   0.0,   0.0,   0.0],
+                                    [0.0,  0.0,aCert,   0.0,   0.0,   0.0],
+                                    [0.0,  0.0,  0.0, pCert,   0.0,   0.0],
+                                    [0.0,  0.0,  0.0,   0.0, vCert,   0.0],
+                                    [0.0,  0.0,  0.0,   0.0,   0.0, aCert]])
 
-        self.eps0    =   np.matrix([[pCert,0,  0,   0,   0,   0],
-                                    [0,vCert,  0,   0,   0,   0],
-                                    [0,  0,aCert,   0,   0,   0],
-                                    [0,  0,  0, pCert,   0,   0],
-                                    [0,  0,  0,   0, vCert,   0],
-                                    [0,  0,  0,   0,   0, aCert]])
-
+        self.eps0    =   np.matrix([[pCert,0.0,  0.0,   0.0,   0.0,   0.0],
+                                    [0.0,vCert,  0.0,   0.0,   0.0,   0.0],
+                                    [0.0,  0.0,aCert,   0.0,   0.0,   0.0],
+                                    [0.0,  0.0,  0.0, pCert,   0.0,   0.0],
+                                    [0.0,  0.0,  0.0,   0.0, vCert,   0.0],
+                                    [0.0,  0.0,  0.0,   0.0,   0.0, aCert]])
 
         self.H = np.matrix([[1, 0, 0, 0, 0, 0],
                             [0, 0, 0, 1, 0, 0]])
@@ -125,13 +127,23 @@ class Agent(object):
 
         mat = self.F(delta) * Xt;
 
-        print mat
-        print self.epsilon
+        #print mat
+        #print self.epsilon
 
-        self.Xt = LA.norm(mat, self.epsilon)
+        self.Xt = self.Xt/(LA.norm(mat, 2) + (LA.norm(self.epsilon)))
 
+    def resetMu(self, x, y):
+
+        self.mu=np.matrix([[x],
+                           [0],
+                           [0],
+                           [y],
+                           [0],
+                           [0]])
+        self.mu_timer = 0
 
     def tick(self, time_diff):
+
         """Some time has passed; decide what to do next."""
         tank = self.bzrc.get_mytanks()[0]
         shots = self.bzrc.get_shots()
@@ -149,17 +161,33 @@ class Agent(object):
         while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
             self.targetindex = int(random.randint(0, 1) * len(enemytanks))
 
+
+        #reset mu after 200 ticks to compensate for overconfidence
+        self.mu_timer += 1
+        if self.mu_timer > 2000:
+            self.resetMu(enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
+
         self.updateKalman(enemytanks[self.targetindex], time_diff)
 
         #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
-        predictedcoord = (0, 0)
+        predictedcoord = ((self.F(0) * self.mu).item(0,0),(self.F(0) * self.mu).item(2,0))
         for i in range(5):
             #For greater precision, increase the range, thereby increasing the number of predictions
-            predictedcoord = self.predict(dtime)
-            dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / self.constants["shotspeed"]
+            dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / float(self.constants["shotspeed"])
 
-        self.shoot(tank, coord[0], coord[1])
+            shootAtMatrix = self.F(dtime) * self.mu
+
+            predictedcoord = shootAtMatrix.item(0,0), shootAtMatrix.item(2, 0)
+
+            #print self.mu
+            #print shootAtMatrix
+            #print predictedcoord
+            s = raw_input(" " )
+
+            #print predictedcoord
+
+        self.shoot(tank, predictedcoord[0], predictedcoord[1])
 
         #Display stuff
         self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
@@ -176,7 +204,10 @@ class Agent(object):
         results = self.bzrc.do_commands(self.commands)
 
     def shoot(self, tank, x, y):
-        angleTol = math.atan2(3, math.sqrt((x - tank.x)**2 + (y - tank.y)**2))
+        ang = math.sqrt((x - tank.x)**2 + (y - tank.y)**2)
+        #print tank.x, tank.y, x, y
+
+        angleTol = math.atan2(3, ang)
         self.commands.append(Command(tank.index, 0, 
             1.5 * self.normalize_angle(math.atan2(y - tank.y, x - tank.x) - tank.angle), 
             abs(math.atan2(y - tank.y, x - tank.x) - tank.angle) < angleTol))
@@ -192,42 +223,49 @@ class Agent(object):
 
     def draw_circle(self, x, y, radius, color):
         for theta in drange(0, 2 * math.pi, 1.0 / (2 * radius * math.pi)):
-            newx = round(x + math.cos(theta) * radius)
-            newy = round(y + math.sin(theta) * radius)
+            newy = round(x + math.cos(theta) * radius)
+            newx = round(y + math.sin(theta) * radius)
             if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
                 grid[newx][newy] = color
                 if (newx, newy) not in self.colored:
                     self.colored.append((newx, newy))
 
     def draw_x(self, x, y, radius, color):
+
         for change in drange(0, radius / math.sqrt(2), 1):
-            newx = round(x + change)
-            newy = round(y + change)
+            newy = round(x + change)
+            newx = round(y + change)
             if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
                 grid[newx][newy] = color
                 if (newx, newy) not in self.colored:
                     self.colored.append((newx, newy))
-            newx = round(x + change)
-            newy = round(y - change)
+            newy = round(x + change)
+            newx = round(y - change)
             if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
                 grid[newx][newy] = color
                 if (newx, newy) not in self.colored:
                     self.colored.append((newx, newy))
-            newx = round(x - change)
-            newy = round(y + change)
+            newy = round(x - change)
+            newx = round(y + change)
             if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
                 grid[newx][newy] = color
                 if (newx, newy) not in self.colored:
                     self.colored.append((newx, newy))
-            newx = round(x - change)
-            newy = round(y - change)
+            newy = round(x - change)
+            newx = round(y - change)
             if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
                 grid[newx][newy] = color
                 if (newx, newy) not in self.colored:
                     self.colored.append((newx, newy))
         
     def updateKalman(self, tank, time_diff):
-        self.update_X(tank.x, tank.y, time_diff)
+        #self.update_X(tank.x, tank.y, time_diff)
+        self.updateZt(tank.x, tank.y)
+
+        const = self.F(time_diff)*self.epsilon*np.transpose(self.F(time_diff)) + self.eps0
+
+        self.nextMu(time_diff, const)
+        self.nextEps(time_diff, const)
         # self.Xt = np.matrix([tank.x],
         #                     [0],
         #                     [0],
@@ -235,29 +273,35 @@ class Agent(object):
         #                     [0],
         #                     [0])
 
-    def predict(self, time_diff):
-        x = 0
-        y = 0
-
-        return (x, y)
-
     def updateZt(self, x, y):
+        '''
         self.update_X(x, y)
-        self.Zt = LA.norm(self.H * self.Xt, self.epZ)
+        self.Zt = self.ZT / (LA.norm(self.H * self.Xt, 2) + (LA.norm(self.Zt)))
+        '''
+        self.Zt = np.matrix([x, y])
 
-        print self.Zt
+    def nextK(self, deltaT, const):
+        t = (const)*np.transpose(self.H)*LA.inv(self.H * const*np.transpose(self.H) + self.epZ)
+        return t
 
-    def nextK(self, deltaT):
-        return (self.F(deltaT)*self.epsilon*np.transpose(self.F(deltaT)) + self.epsilon)*np.transpose(self.H)*LA.inv(self.H * ((self.F(deltaT)*self.epsilon*np.transpose(self.F(deltaT)) + self.epsilon)*np.transpose(self.H)) + self.epZ)
 
+    def nextMu(self, deltaT, const):
+        print self.mu[0], self.mu[1]
+        print self.nextK(deltaT, const).shape()
+        print (self.Zt - (self.H * self.F(deltaT) * self.mu)).shape()
 
-    def nextMu(self, deltaT):
-        self.updateZt()
-        self.mu = self.F(deltaT) * self.mu + self.nextK(deltaT) * (self.Zt - (self.H * self.mu))
-        return self.mu
+        self.mu = self.F(deltaT) * self.mu + self.nextK(deltaT, const) * (self.Zt - (self.H * self.F(deltaT) * self.mu))
+        #print self.mu
+        #return self.mu
 
-    def nextEps(self, deltaT):
-        return (self.mu.I - self.nextK(deltaT) * self.H )* (self.F(deltaT)*self.epsilon * np.transpose(self.F(deltaT)) + self.epsilon)
+    def nextEps(self, deltaT, const):
+
+        self.epsilon = (np.identity(6) - self.nextK(deltaT, const) * self.H )* (const)
+
+        #print self.mu
+        #s = raw_input(" ")
+
+        return self.epsilon
 
 
 def drange(start, stop, step):
