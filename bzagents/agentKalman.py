@@ -76,12 +76,12 @@ class Agent(object):
                              [0],
                              [0]])
 
-        self.F = lambda delta, c :np.matrix([[1, delta/2, delta**2/2,     0,        0,          0],
+        self.F = lambda delta    :np.matrix([[1, delta/2, delta**2/2,     0,        0,          0],
                                              [0,       1,      delta,     0,        0,          0],
-                                             [0,      -c,          1,     0,        0,          0],
+                                             [0,     -.1,          1,     0,        0,          0],
                                              [0,       0,          0,     1,    delta, delta**2/2],
                                              [0,       0,          0,     0,        1,      delta],
-                                             [0,       0,          0,     0,       -c,          1]])
+                                             [0,       0,          0,     0,      -.1,          1]])
 
         pCert = .1
         vCert = 5
@@ -111,8 +111,25 @@ class Agent(object):
         self.epZ = np.matrix([[variance**2, 0],
                               [0, variance**2]])
 
-    def update_X(self):
-        self.Xt = self.Xt / LA.norm(self.F * self.Xt, self.epsilon)#!!! Pick up here; we're updating the kalman filter every tick
+    def update_X(self, x, y, delta):
+        Xt = np.matrix([[x], 
+                        [0], 
+                        [0], 
+                        [y], 
+                        [0], 
+                        [0]])
+
+        #Xt = np.transpose(Xt)
+
+        #print Xt, "\n",self.Xt, "\n", self.F(delta)
+
+        mat = self.F(delta) * Xt;
+
+        print mat
+        print self.epsilon
+
+        self.Xt = LA.norm(mat, self.epsilon)
+
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -122,11 +139,15 @@ class Agent(object):
         
         enemytanks = self.bzrc.get_othertanks()
         #Check to see if all enemy tanks are dead and, if they are, return
-        if len([t for t in enemytanks if t.status == 'alive']) == 0
+        if len([t for t in enemytanks if t.status == 'alive']) == 0:
             return
+
+        if self.targetindex == -1:
+            self.targetindex = int(random.randint(0, len(enemytanks)))
+
         #If our target is dead or uninitialized, find a live tank
         while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
-            self.targetindex = int(random() * len(enemytanks))
+            self.targetindex = int(random.randint(0, 1) * len(enemytanks))
 
         self.updateKalman(enemytanks[self.targetindex], time_diff)
 
@@ -206,7 +227,7 @@ class Agent(object):
                     self.colored.append((newx, newy))
         
     def updateKalman(self, tank, time_diff):
-        update_X()
+        self.update_X(tank.x, tank.y, time_diff)
         # self.Xt = np.matrix([tank.x],
         #                     [0],
         #                     [0],
@@ -220,20 +241,23 @@ class Agent(object):
 
         return (x, y)
 
-    def updateZt(self):
-        self.Zt = self.Zt/LA.norm(self.H * self.Xt, self.epZ)
+    def updateZt(self, x, y):
+        self.update_X(x, y)
+        self.Zt = LA.norm(self.H * self.Xt, self.epZ)
+
+        print self.Zt
 
     def nextK(self, deltaT):
-        return (self.F(deltaT, .1)*self.epsilon*np.transpose(self.F(deltaT,.1)) + self.epsilon)*np.transpose(self.H)*LA.inv(self.H * ((self.F(deltaT, .1)*self.epsilon*np.transpose(self.F(deltaT, .1)) + self.epsilon)*np.transpose(self.H)) + self.epZ)
+        return (self.F(deltaT)*self.epsilon*np.transpose(self.F(deltaT)) + self.epsilon)*np.transpose(self.H)*LA.inv(self.H * ((self.F(deltaT)*self.epsilon*np.transpose(self.F(deltaT)) + self.epsilon)*np.transpose(self.H)) + self.epZ)
 
 
     def nextMu(self, deltaT):
         self.updateZt()
-        self.mu = self.F(deltaT, .1) * self.mu + self.nextK(deltaT) * (self.Zt - (self.H * self.mu))
+        self.mu = self.F(deltaT) * self.mu + self.nextK(deltaT) * (self.Zt - (self.H * self.mu))
         return self.mu
 
     def nextEps(self, deltaT):
-        return (self.mu.I - self.nextK(deltaT) * self.H )* (self.F(deltaT, .1)*self.epsilon * np.transpose(self.F(deltaT, .1)) + self.epsilon)
+        return (self.mu.I - self.nextK(deltaT) * self.H )* (self.F(deltaT)*self.epsilon * np.transpose(self.F(deltaT)) + self.epsilon)
 
 
 def drange(start, stop, step):
