@@ -87,8 +87,8 @@ class Agent(object):
                                              [0.0,       0.0,          0.0,     0.0,      -.1,          1]])
 
         pCert = 0.1
-        vCert = 5.0
-        aCert = 40.0
+        vCert = 1.0
+        aCert = 80.0
 
         self.epsilon  =  np.matrix([[pCert,0.0,  0.0,   0.0,   0.0,   0.0],
                                     [0.0,vCert,  0.0,   0.0,   0.0,   0.0],
@@ -155,19 +155,33 @@ class Agent(object):
             return
 
         if self.targetindex == -1:
-            self.targetindex = int(random.randint(0, len(enemytanks)))
+            self.targetindex = int(random.randint(0, len(enemytanks) -1 ))
+
+        if self.targetindex < 0 or self.targetindex > 2:
+            self.targetindex = 0
+
+        #print self.targetindex
 
         #If our target is dead or uninitialized, find a live tank
-        while self.targetindex < 0 or enemytanks[self.targetindex].status == 'dead':
-            self.targetindex = int(random.randint(0, 1) * len(enemytanks))
+        try:
+            while enemytanks[self.targetindex].status == 'dead':
+                self.targetindex = int(random.randint(0, len(enemytanks)))
+        except (IndexError):
+            print self.targetindex
+            sys.exit(0)
 
 
         #reset mu after 200 ticks to compensate for overconfidence
         self.mu_timer += 1
         if self.mu_timer > 2000:
             self.resetMu(enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
+            print "RESET"
+
 
         self.updateKalman(enemytanks[self.targetindex], time_diff)
+
+        #print self.mu
+        #s = raw_input("")
 
         #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
@@ -178,12 +192,12 @@ class Agent(object):
 
             shootAtMatrix = self.F(dtime) * self.mu
 
-            predictedcoord = shootAtMatrix.item(0,0), shootAtMatrix.item(2, 0)
+            predictedcoord = shootAtMatrix.item(0,0), shootAtMatrix.item(3, 0)
 
             #print self.mu
             #print shootAtMatrix
             #print predictedcoord
-            s = raw_input(" " )
+            #s = raw_input(" " )
 
             #print predictedcoord
 
@@ -261,6 +275,7 @@ class Agent(object):
     def updateKalman(self, tank, time_diff):
         #self.update_X(tank.x, tank.y, time_diff)
         self.updateZt(tank.x, tank.y)
+        #print tank.x, tank.y
 
         const = self.F(time_diff)*self.epsilon*np.transpose(self.F(time_diff)) + self.eps0
 
@@ -278,20 +293,34 @@ class Agent(object):
         self.update_X(x, y)
         self.Zt = self.ZT / (LA.norm(self.H * self.Xt, 2) + (LA.norm(self.Zt)))
         '''
-        self.Zt = np.matrix([x, y])
+        self.Zt = np.matrix([[x], [y]])
 
     def nextK(self, deltaT, const):
-        t = (const)*np.transpose(self.H)*LA.inv(self.H * const*np.transpose(self.H) + self.epZ)
+        t = ((const)
+            *np.transpose(self.H)
+            *LA.inv(self.H 
+                * const
+                *np.transpose(self.H) 
+                +self.epZ))
+
+        # print "Inverse: \n", (LA.inv(self.H 
+        #         * const
+        #         *np.transpose(self.H) 
+        #         +self.epZ))
+
         return t
 
 
     def nextMu(self, deltaT, const):
-        print self.mu[0], self.mu[1]
-        print self.nextK(deltaT, const).shape()
-        print (self.Zt - (self.H * self.F(deltaT) * self.mu)).shape()
+        # print "F, Mu: \n",self.F(deltaT) * self.mu
+        # print "Const: \n", const 
+        # print "K: \n", self.nextK(deltaT, const)
+        # print "Left: \n", (self.Zt - (self.H * self.F(deltaT) * self.mu))
+        # print "H: \n", self.H
+        # print "Zt: \n", self.Zt
 
         self.mu = self.F(deltaT) * self.mu + self.nextK(deltaT, const) * (self.Zt - (self.H * self.F(deltaT) * self.mu))
-        #print self.mu
+        #print "NEW SELF.MU: \n", self.mu
         #return self.mu
 
     def nextEps(self, deltaT, const):
