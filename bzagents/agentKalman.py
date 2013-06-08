@@ -205,6 +205,8 @@ class Agent(object):
 
         #Display stuff
         self.draw_circle(tank.x + int(self.constants["worldsize"]) / 2, tank.y + int(self.constants["worldsize"]) / 2, 10, 0)
+        self.draw_circle(self.mu[0][0] + int(self.constants["worldsize"]) / 2, self.mu[3][0] + int(self.constants["worldsize"]) / 2, 5, 0)
+        self.draw_x(predictedcoord[0] + int(self.constants["worldsize"]) / 2, predictedcoord[1] + int(self.constants["worldsize"]) / 2, 2, 0)
         for enemy in enemytanks:
             self.draw_x(enemy.x + int(self.constants["worldsize"]) / 2, enemy.y + int(self.constants["worldsize"]) / 2, 10, 0)
         for shot in shots:
