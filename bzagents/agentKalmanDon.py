@@ -190,10 +190,11 @@ class Agent(object):
             #For greater precision, increase the range, thereby increasing the number of predictions
             dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / float(self.constants["shotspeed"])
 
-            shootAtMatrix = self.F(dtime) * self.mu
+            # shootAtMatrix = self.F(dtime) * self.mu
+            predictedcoord = ((self.F(dtime) * self.mu).item(0,0),(self.F(dtime) * self.mu).item(2,0))
 
-            predictedcoord = shootAtMatrix.item(0,0), shootAtMatrix.item(3, 0)
-
+            # self.draw_x(predictedcoord[0] + int(self.constants["worldsize"]) / 2, predictedcoord[1] + int(self.constants["worldsize"]) / 2, 2, 0)
+        
             #print self.mu
             #print shootAtMatrix
             #print predictedcoord
