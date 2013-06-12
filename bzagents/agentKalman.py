@@ -136,7 +136,6 @@ class Agent(object):
         self.Xt = self.Xt/(LA.norm(mat, 2) + (LA.norm(self.epsilon)))
 
     def resetMu(self, x, y):
-
         self.mu=np.matrix([[x],
                            [0],
                            [0],
@@ -144,6 +143,51 @@ class Agent(object):
                            [0],
                            [0]])
         self.mu_timer = 0
+        # # self.mu=np.matrix([[0],
+        # #                    [0],
+        # #                    [0],
+        # #                    [0],
+        # #                    [0],
+        # #                    [0]])
+
+        # self.Xt = np.matrix([[0],
+        #                      [0],
+        #                      [0],
+        #                      [0],
+        #                      [0],
+        #                      [0]])
+
+        # self.F = lambda delta    :np.matrix([[1,   delta, (delta**2)/2,     0.0,        0.0,          0.0],
+        #                                      [0.0,     1,        delta,     0.0,        0.0,          0.0],
+        #                                      [0.0,  -.01,            1,     0.0,        0.0,          0.0],
+        #                                      [0.0,   0.0,          0.0,       1,      delta, (delta**2)/2],
+        #                                      [0.0,   0.0,          0.0,     0.0,          1,        delta],
+        #                                      [0.0,   0.0,          0.0,     0.0,       -.01,            1]])
+
+        # pCert = .1
+        # vCert = .1
+        # aCert = .2
+
+        # self.epsilon  =  np.matrix([[pCert,0.0,  0.0,   0.0,   0.0,   0.0],
+        #                             [0.0,vCert,  0.0,   0.0,   0.0,   0.0],
+        #                             [0.0,  0.0,aCert,   0.0,   0.0,   0.0],
+        #                             [0.0,  0.0,  0.0, pCert,   0.0,   0.0],
+        #                             [0.0,  0.0,  0.0,   0.0, vCert,   0.0],
+        #                             [0.0,  0.0,  0.0,   0.0,   0.0, aCert]])
+
+        # self.eps0    =   np.matrix([[pCert,0.0,  0.0,   0.0,   0.0,   0.0],
+        #                             [0.0,vCert,  0.0,   0.0,   0.0,   0.0],
+        #                             [0.0,  0.0,aCert,   0.0,   0.0,   0.0],
+        #                             [0.0,  0.0,  0.0, pCert,   0.0,   0.0],
+        #                             [0.0,  0.0,  0.0,   0.0, vCert,   0.0],
+        #                             [0.0,  0.0,  0.0,   0.0,   0.0, aCert]])
+
+        # self.H = np.matrix([[1, 0, 0, 0, 0, 0],
+        #                     [0, 0, 0, 1, 0, 0]])
+
+        # self.Zt = np.matrix([[0, 0]])
+
+        # self.Y_TEST = 0
 
     def tick(self, time_diff):
 
@@ -153,6 +197,14 @@ class Agent(object):
         self.commands = []
         
         enemytanks = self.bzrc.get_othertanks()
+        
+        while enemytanks[self.targetindex].status == 'dead':
+            if len([x for x in enemytanks if x.status == 'alive']) == 0:
+                return
+            self.targetindex = int(random.randint(0, len(enemytanks) - 1))
+            self.resetMu(enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
+            print "RESET"
+
         #Check to see if all enemy tanks are dead and, if they are, return
         if len([t for t in enemytanks if t.status == 'alive']) == 0:
             return
@@ -163,23 +215,18 @@ class Agent(object):
         if self.targetindex < 0 or self.targetindex > 2:
             self.targetindex = 0
 
-        if enemytanks[self.targetindex].status == 'dead':
-            self.targetindex = int(random.randint(0, len(enemytanks) - 1))
-            self.resetMu(enemytanks[self.targetindex].x, enemytanks[self.targetindex].y)
-            print "RESET"
-
         #print self.targetindex
 
         #If our target is dead or uninitialized, find a live tank
-        try:
-            while enemytanks[self.targetindex].status == 'dead':
-                enemytanks = self.bzrc.get_othertanks()
-                self.targetindex = int(random.randint(0, len(enemytanks) - 1))
-                #if(enemytanks[self.targetindex].status == 'dead'):
-                    #sleep(1)
-        except (IndexError):
-            print self.targetindex
-            sys.exit(0)
+        # try:
+        #     while enemytanks[self.targetindex].status == 'dead':
+        #         enemytanks = self.bzrc.get_othertanks()
+        #         self.targetindex = int(random.randint(0, len(enemytanks) - 1))
+        #         #if(enemytanks[self.targetindex].status == 'dead'):
+        #             #sleep(1)
+        # except (IndexError):
+        #     print self.targetindex
+        #     sys.exit(0)
 
         enemy = enemytanks[self.targetindex]
 
@@ -199,13 +246,13 @@ class Agent(object):
         #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
         predictedcoord = ((self.F(time_diff) * self.mu).item(0,0),(self.F(time_diff) * self.mu).item(3,0))
-        #for i in range(5):
-            #For greater precision, increase the range, thereby increasing the number of predictions
-        xDist = (predictedcoord[0] - tank.x)**2
-        yDist = (predictedcoord[1] - tank.y)**2
-        dtime = math.sqrt( xDist + yDist) / (float(self.constants["shotspeed"]))
+        for i in range(5):
+            # For greater precision, increase the range, thereby increasing the number of predictions
+            xDist = (predictedcoord[0] - tank.x)**2
+            yDist = (predictedcoord[1] - tank.y)**2
+            dtime = math.sqrt( xDist + yDist) / (float(self.constants["shotspeed"]))
 
-        shootAtMatrix = self.F(dtime ) * self.mu
+            shootAtMatrix = self.F(dtime ) * self.mu
 
         # if self.mu_timer % 5 == 0:
         #     print "--------"
@@ -247,25 +294,24 @@ class Agent(object):
         #print tank.x, tank.y, x, y
 
         pointTheta = math.atan2(x, y)
-
         
         ang = math.sqrt((x - tank.x)**2 + (y - tank.y)**2)
             
         angleTol = math.sqrt(math.atan2(1, ang/3)) / 4
 
         for i in range(0, 200, 4):
-            self.draw_x(math.cos(tank.angle +  angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.x, math.sin(tank.angle + angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.y, 2, .3)
-            self.draw_x(math.cos(tank.angle - angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.x, math.sin(tank.angle - angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.y, 2, .3)
+            self.draw_x(math.cos(tank.angle +  angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.x, math.sin(tank.angle + angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.y, 1, .3)
+            self.draw_x(math.cos(tank.angle - angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.x, math.sin(tank.angle - angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.y, 1, .3)
 
-        targetAngle = abs(math.atan2(y - tank.y, x - tank.x) - tank.angle)
+        targetAngle = math.atan2(y - tank.y, x - tank.x)
 
+        print x, y
         if pointTheta > tank.angle:
             shouldShoot = targetAngle + .1 < angleTol
 
         else:
             shouldShoot = targetAngle - .1 < angleTol       
-        
-        self.commands.append(Command(tank.index, 0, self.normalize_angle(math.atan2(y - tank.y, x - tank.x)  - tank.angle), shouldShoot))
+        self.commands.append(Command(tank.index, 0, self.normalize_angle(math.atan2(y - tank.y, x - tank.x)  - tank.angle) * 2.5, abs(tank.angle - targetAngle) < angleTol))
         
 
     def normalize_angle(self, angle):
