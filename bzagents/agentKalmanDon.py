@@ -10,6 +10,7 @@ from bzrc import BZRC, Command
 import OpenGL
 OpenGL.ERROR_CHECKING = False
 import numpy as np
+from time import sleep
 from numpy import linalg as LA
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -165,7 +166,10 @@ class Agent(object):
         #If our target is dead or uninitialized, find a live tank
         try:
             while enemytanks[self.targetindex].status == 'dead':
-                self.targetindex = int(random.randint(0, len(enemytanks)))
+                enemytanks = self.bzrc.get_othertanks()
+                self.targetindex = int(random.randint(0, len(enemytanks) - 1))
+                if(enemytanks[self.targetindex].status == 'dead'):
+                    sleep(1)
         except (IndexError):
             print self.targetindex
             sys.exit(0)
@@ -185,13 +189,13 @@ class Agent(object):
 
         #This part iteratively approaches the ideal angle at which to fire at the tank
         dtime = 0
-        predictedcoord = ((self.F(0) * self.mu).item(0,0),(self.F(0) * self.mu).item(2,0))
-        for i in range(5):
+        predictedcoord = ((self.F(1) * self.mu).item(0,0),(self.F(1) * self.mu).item(2,0))
+        # for i in range(5):
             #For greater precision, increase the range, thereby increasing the number of predictions
-            dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / float(self.constants["shotspeed"])
+            # dtime = math.sqrt((predictedcoord[0] - tank.x)**2 + (predictedcoord[1] - tank.y)**2) / float(self.constants["shotspeed"])
 
             # shootAtMatrix = self.F(dtime) * self.mu
-            predictedcoord = ((self.F(dtime) * self.mu).item(0,0),(self.F(dtime) * self.mu).item(2,0))
+            # predictedcoord = ((self.F(dtime) * self.mu).item(0,0),(self.F(dtime) * self.mu).item(2,0))
 
             # self.draw_x(predictedcoord[0] + int(self.constants["worldsize"]) / 2, predictedcoord[1] + int(self.constants["worldsize"]) / 2, 2, 0)
         
