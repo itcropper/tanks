@@ -37,6 +37,9 @@ from fractions import gcd
 grid = None
 debugDisplay = ['discretize'][0]
 
+emptyColor = 0
+obstacleColor = 1
+
 def draw_grid():
     # This assumes you are using a numpy array for your grid
     width, height = grid.shape
@@ -74,6 +77,11 @@ class Agent(object):
         self.constants["worldoffset"] = int(self.constants["worldsize"]) / 2
         self.obstacles = self.bzrc.get_obstacles()
         self.discretize()
+        tank = self.bzrc.get_mytanks()[0]
+        flag = [flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]
+        start = (int((tank.y + self.constants["worldoffset"]) / self.shrinkFactor), int((tank.x + self.constants["worldoffset"]) / self.shrinkFactor))
+        goal = (int((flag.y + self.constants["worldoffset"]) / self.shrinkFactor), int((flag.x + self.constants["worldoffset"]) / self.shrinkFactor))
+        self.uniform_search(start, goal)
         self.commands = []
 
     def discretize(self):
@@ -94,9 +102,14 @@ class Agent(object):
         sidelength = int(self.constants["worldsize"]) / self.shrinkFactor
         if debugDisplay == 'discretize':
             init_window(sidelength, sidelength)
+
         # Initialize the occgrid
         for y in range(sidelength):
-            self.reducedGrid.append([0 for x in range(sidelength)])
+            self.reducedGrid.append([emptyColor for x in range(sidelength)])
+        if debugDisplay == 'discretize':
+            for y in range(sidelength):
+                for x in range(sidelength):
+                    grid[x][y] = emptyColor
         # Calculate the location and area of obstacles and set their positions in the occgrid and display
         for obstacle in self.obstacles:
             start = (obstacle[2][1] + self.constants["worldoffset"]) / self.shrinkFactor, (obstacle[2][0] + self.constants["worldoffset"]) / self.shrinkFactor
@@ -107,8 +120,8 @@ class Agent(object):
                 for x in range(int(start[0]), int(start[0] + width)):
                     if 0 <= x < sidelength and 0 <= y < sidelength:
                         if debugDisplay == 'discretize':
-                            grid[x][y] = 1
-                        self.reducedGrid[x][y] = 1
+                            grid[x][y] = obstacleColor
+                        self.reducedGrid[x][y] = obstacleColor
         print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
 
     def tick(self, time_diff):
@@ -152,6 +165,56 @@ class Agent(object):
             angle -= 2 * math.pi
         return angle
 
+    def uniform_search(self, start, goal):
+
+        ToVisit = [Node(int(start[0]), int(start[1]), 0,
+            math.sqrt((int(start[0]) - int(goal[0])) ** 2 + (int(start[1]) - int(goal[1])) ** 2), None)]
+        Visited = {}
+        curNode = None
+        lastupdate = time.time()
+        while len(ToVisit) > 0:
+            curNode = ToVisit[0]
+            lowi = 0
+            for i in range(len(ToVisit)):
+                if ToVisit[i].d < curNode.d:
+                    lowi = i
+                    curNode = ToVisit[i]
+            curNode = ToVisit.pop(lowi)
+            if curNode.parent != None and debugDisplay == 'discretize':
+                grid[curNode.parent.x][curNode.parent.y] = .5
+                grid[curNode.x][curNode.y] = .5
+                # if time.time() - lastupdate > 1.0/30:
+                #     lastupdate = time.time()
+                #     draw_grid()
+            if curNode.x == goal[0] and curNode.y == goal[1]:
+                break
+            for cha in [(x, y) for y in range(-1, 2) for x in range(-1, 2) if (x, y) != (0, 0)]:
+                newx = curNode.x + cha[0]
+                newy = curNode.y + cha[1]
+                if(0 <= newx < len(self.reducedGrid) and 0 <= newy < len(self.reducedGrid[newx])):
+                    if self.reducedGrid[newx][newy] == emptyColor and (curNode.x + cha[0], curNode.y + cha[1]) not in Visited:
+                        newVisit = Node(curNode.x + cha[0], curNode.y + cha[1], curNode.d + math.sqrt(cha[0] ** 2 + cha[1] ** 2),
+                            math.sqrt((curNode.x + cha[0] - goal[0]) ** 2 + (curNode.y + cha[1] - goal[1]) ** 2), curNode)
+                        Visited[newVisit.x, newVisit.y] = newVisit
+                        ToVisit.append(newVisit)
+        if debugDisplay != 'none':
+            print 'Path found in 1 /', int((time.time() - lastupdate)**-1), 'of a second!'
+        if debugDisplay == 'discretize':
+            tempNode = curNode
+            while tempNode.parent != None:
+                grid[tempNode.x][tempNode.y] = 0
+                tempNode = tempNode.parent
+            draw_grid()
+        return curNode
+
+class Node(object):
+    def __init__(self, x, y, distance, heuristic, parent):
+        self.x = x
+        self.y = y
+        self.h = heuristic
+        self.d = distance
+        self.parent = parent
+        self.visited = False
 
 def main():
     # Process CLI arguments.
