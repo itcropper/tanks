@@ -76,30 +76,33 @@ class Agent(object):
         self.commands = []
 
     def discretize(self):
-        self.occFactor = int(self.constants["worldsize"])
+        """This function iterates through all obstacles and finds the greatest common divisor (self.shrinkFactor) in their coordinates.
+            It then creates an discrete occgrid (self.reducedGrid) where each cell in the grid represents an x by x space, where x = shrinkFactor"""
+        self.shrinkFactor = int(self.constants["worldsize"])
         for obstacle in self.obstacles:
             for i in range(len(obstacle)):
                 coord = obstacle[i]
                 nextcoord = obstacle[(i + 1) % len(obstacle)]
-                self.occFactor = int(min(abs(gcd(coord[0], coord[1])),
+                self.shrinkFactor = int(min(abs(gcd(coord[0], coord[1])),
                     abs(gcd(nextcoord[0], nextcoord[1])),
                     abs(gcd(coord[0], nextcoord[0])),
                     abs(gcd(coord[1], nextcoord[1]))))
-        print "Grid reduced by a factor of", str(self.occFactor) + "!"
-        self.discOcc = []
-        sidelength = int(self.constants["worldsize"]) / self.occFactor
+        self.reducedGrid = []
+        sidelength = int(self.constants["worldsize"]) / self.shrinkFactor
         init_window(sidelength, sidelength)
         for y in range(sidelength):
-            self.discOcc.append([0 for x in range(sidelength)])
+            self.reducedGrid.append([0 for x in range(sidelength)])
         for obstacle in self.obstacles:
-            start = (obstacle[2][1] + self.constants["worldoffset"]) / self.occFactor, (obstacle[2][0] + self.constants["worldoffset"]) / self.occFactor
-            width = (obstacle[0][1] - obstacle[1][1]) / self.occFactor
-            height = (obstacle[1][0] - obstacle[2][0]) / self.occFactor
+            start = (obstacle[2][1] + self.constants["worldoffset"]) / self.shrinkFactor, (obstacle[2][0] + self.constants["worldoffset"]) / self.shrinkFactor
+            width = (obstacle[0][1] - obstacle[1][1]) / self.shrinkFactor
+            height = (obstacle[1][0] - obstacle[2][0]) / self.shrinkFactor
 
             for y in range(int(start[1]), int(start[1] + height)):
                 for x in range(int(start[0]), int(start[0] + width)):
                     if 0 <= x < sidelength and 0 <= y < sidelength:
                         grid[x][y] = 1
+                        self.reducedGrid[x][y] = 1
+        print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -114,6 +117,24 @@ class Agent(object):
         self.commands = []
 
         results = self.bzrc.do_commands(self.commands)
+
+    def move_to_tile(self, tank, target_x, target_y):
+        """This function is used to send the tank to a certain coordinate in the occgrid. It returns false
+            if the tank is not there yet, and true otherwise"""
+        x = (target_x + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
+        y = (target_y + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
+        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor / 2:
+            return true
+        self.move_to_position(self, tank, x, y)
+        return false
+
+    def move_to_position(self, tank, target_x, target_y):
+        """Set command to move to given coordinates."""
+        target_angle = math.atan2(target_y - tank.y,
+                                  target_x - tank.x)
+        relative_angle = self.normalize_angle(target_angle - tank.angle)
+        command = Command(tank.index, 1, 2 * relative_angle, True)
+        self.commands.append(command)
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
