@@ -12,4 +12,4 @@
 #./bin/bzrflag --window-size 600x600 --world=maps/empty.bzw --world-size=800 --red-tanks=1 --green-tanks=1 --blue-tanks=1 --purple-tanks=1 
 #./bin/bzrflag --window-size 600x600 --world=maps/small_empty.bzw --world-size=400 --default-posnoise=5 --red-tanks=1 --green-tanks=1 --blue-tanks=1 --purple-tanks=1 
 #./bin/bzrflag --window-size 600x600 --world-size=400 --world=maps/small_four_ls.bzw --seed=1 --red-tanks=10 --green-tanks=10 --blue-tanks=0 --purple-tanks=0
-./bin/bzrflag --window-size 600x600 --world-size=800 --world=maps/maze1.bzw --seed=1 --red-tanks=10 --green-tanks=10 --blue-tanks=0 --purple-tanks=0
+./bin/bzrflag --window-size 600x600 --world-size=800 --world=maps/maze1.bzw --seed=1 --red-tanks=1 --green-tanks=0 --blue-tanks=0 --purple-tanks=0

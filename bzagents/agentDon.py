@@ -77,12 +77,8 @@ class Agent(object):
         self.constants["worldoffset"] = int(self.constants["worldsize"]) / 2
         self.obstacles = self.bzrc.get_obstacles()
         self.discretize()
-        tank = self.bzrc.get_mytanks()[0]
-        flag = [flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]
-        start = (int((tank.y + self.constants["worldoffset"]) / self.shrinkFactor), int((tank.x + self.constants["worldoffset"]) / self.shrinkFactor))
-        goal = (int((flag.y + self.constants["worldoffset"]) / self.shrinkFactor), int((flag.x + self.constants["worldoffset"]) / self.shrinkFactor))
-        self.uniform_search(start, goal)
         self.commands = []
+        self.tankpath = []
 
     def discretize(self):
         """This function iterates through all obstacles and finds the greatest common divisor (self.shrinkFactor) in their coordinates.
@@ -133,27 +129,46 @@ class Agent(object):
         self.shots = shots
         self.enemies = [tank for tank in othertanks if tank.color !=
                         self.constants['team']]
-        draw_grid()
+
         self.commands = []
+        tank = self.mytanks[0]
+        if len(self.tankpath) == 0:
+            if tank.flag == '-':
+                print 'green'
+                self.tankpath = self.uniform_search(self.convert_to_grid_tuple(tank),
+                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]))
+            else:
+                print 'red'
+                self.tankpath = self.uniform_search(self.convert_to_grid_tuple(tank),
+                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'red'][0]))
+        if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until
+            print self.tankpath.pop()
+
+        draw_grid()
 
         results = self.bzrc.do_commands(self.commands)
 
-    def move_to_tile(self, tank, target_x, target_y):
+    def convert_to_grid_tuple(self, thing):
+        return (int((thing.y + self.constants["worldoffset"]) / self.shrinkFactor), int((thing.x + self.constants["worldoffset"]) / self.shrinkFactor))
+
+    def move_to_tile(self, tank, target):
         """This function is used to send the tank to a certain coordinate in the occgrid. It returns false
             if the tank is not there yet, and true otherwise"""
-        x = (target_x + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
-        y = (target_y + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
+        x = (target[1] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
+        y = (target[0] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
+        # print math.sqrt((x - tank.x)**2 + (y - tank.y)**2), 'of', self.shrinkFactor / 2, '(', x, y, ')'
         if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor / 2:
-            return true
-        self.move_to_position(self, tank, x, y)
-        return false
+            return True
+        self.move_to_position(tank, x, y)
+        # print 'moving to ', x, y
+        return False
 
     def move_to_position(self, tank, target_x, target_y):
         """Set command to move to given coordinates."""
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, False)
+        command = Command(tank.index, abs((relative_angle * 3)**-1), 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
         self.commands.append(command)
 
     def normalize_angle(self, angle):
@@ -202,10 +217,14 @@ class Agent(object):
         if debugDisplay == 'discretize':
             tempNode = curNode
             while tempNode.parent != None:
-                grid[tempNode.x][tempNode.y] = 0
+                grid[tempNode.x][tempNode.y] = emptyColor
                 tempNode = tempNode.parent
             draw_grid()
-        return curNode
+        path = []
+        while curNode != None:
+            path.append((curNode.x, curNode.y))
+            curNode = curNode.parent
+        return path
 
 class Node(object):
     def __init__(self, x, y, distance, heuristic, parent):
