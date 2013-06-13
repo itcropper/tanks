@@ -35,6 +35,7 @@ from OpenGL.GLU import *
 from fractions import gcd
 
 grid = None
+debugDisplay = ['discretize'][0]
 
 def draw_grid():
     # This assumes you are using a numpy array for your grid
@@ -79,6 +80,7 @@ class Agent(object):
         """This function iterates through all obstacles and finds the greatest common divisor (self.shrinkFactor) in their coordinates.
             It then creates an discrete occgrid (self.reducedGrid) where each cell in the grid represents an x by x space, where x = shrinkFactor"""
         self.shrinkFactor = int(self.constants["worldsize"])
+        # Iterate through all obstacle coordinates and find their greatest common divisor
         for obstacle in self.obstacles:
             for i in range(len(obstacle)):
                 coord = obstacle[i]
@@ -88,10 +90,14 @@ class Agent(object):
                     abs(gcd(coord[0], nextcoord[0])),
                     abs(gcd(coord[1], nextcoord[1]))))
         self.reducedGrid = []
+        # Establish the width/height of the grid
         sidelength = int(self.constants["worldsize"]) / self.shrinkFactor
-        init_window(sidelength, sidelength)
+        if debugDisplay == 'discretize':
+            init_window(sidelength, sidelength)
+        # Initialize the occgrid
         for y in range(sidelength):
             self.reducedGrid.append([0 for x in range(sidelength)])
+        # Calculate the location and area of obstacles and set their positions in the occgrid and display
         for obstacle in self.obstacles:
             start = (obstacle[2][1] + self.constants["worldoffset"]) / self.shrinkFactor, (obstacle[2][0] + self.constants["worldoffset"]) / self.shrinkFactor
             width = (obstacle[0][1] - obstacle[1][1]) / self.shrinkFactor
@@ -100,7 +106,8 @@ class Agent(object):
             for y in range(int(start[1]), int(start[1] + height)):
                 for x in range(int(start[0]), int(start[0] + width)):
                     if 0 <= x < sidelength and 0 <= y < sidelength:
-                        grid[x][y] = 1
+                        if debugDisplay == 'discretize':
+                            grid[x][y] = 1
                         self.reducedGrid[x][y] = 1
         print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
 
@@ -133,7 +140,7 @@ class Agent(object):
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, True)
+        command = Command(tank.index, 1, 2 * relative_angle, False)
         self.commands.append(command)
 
     def normalize_angle(self, angle):
