@@ -278,7 +278,7 @@ class Agent(object):
             self.draw_x(et.x + int(self.constants["worldsize"]) / 2, et.y + int(self.constants["worldsize"]) / 2, 10, 0)
 
         for shot in shots:
-            self.draw_x(shot.x + int(self.constants["worldsize"]) / 2, shot.y + int(self.constants["worldsize"]) / 2, 5, 0)
+            self.draw_circle(shot.x + int(self.constants["worldsize"]) / 2, shot.y + int(self.constants["worldsize"]) / 2, 2, 0)
 
         draw_grid()
         #Clear the display
@@ -297,7 +297,7 @@ class Agent(object):
         
         ang = math.sqrt((x - tank.x)**2 + (y - tank.y)**2)
             
-        angleTol = math.sqrt(math.atan2(1, ang/3)) / 4
+        angleTol = math.sqrt(math.atan2(3, ang)) / 4
 
         for i in range(0, 200, 4):
             self.draw_x(math.cos(tank.angle +  angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.x, math.sin(tank.angle + angleTol)*i + int(self.constants["worldsize"]) / 2 + tank.y, 1, .3)
@@ -311,7 +311,7 @@ class Agent(object):
 
         else:
             shouldShoot = targetAngle - .1 < angleTol       
-        self.commands.append(Command(tank.index, 0, self.normalize_angle(math.atan2(y - tank.y, x - tank.x)  - tank.angle) * 2.5, abs(tank.angle - targetAngle) < angleTol))
+        self.commands.append(Command(tank.index, 0, self.normalize_angle(math.atan2(y - tank.y, x - tank.x)  - tank.angle) * 2.0, abs(tank.angle - targetAngle) < angleTol))
         
 
     def normalize_angle(self, angle):
