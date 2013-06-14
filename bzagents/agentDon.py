@@ -28,6 +28,7 @@ from bzrc import BZRC, Command
 import OpenGL
 OpenGL.ERROR_CHECKING = False
 import numpy as np
+from numpy import matrix
 from numpy import linalg as LA
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -35,7 +36,7 @@ from OpenGL.GLU import *
 from fractions import gcd
 
 grid = None
-debugDisplay = ['discretize'][0]
+debugDisplay = ['', 'discretize', 'friendly', 'constants'][0]
 
 emptyColor = 0
 obstacleColor = 1
@@ -75,10 +76,13 @@ class Agent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.constants["worldoffset"] = int(self.constants["worldsize"]) / 2
+        if debugDisplay == 'constants':
+            print self.constants
         self.obstacles = self.bzrc.get_obstacles()
         self.discretize()
         self.commands = []
         self.tankpath = []
+        self.last = time.time()
 
     def discretize(self):
         """This function iterates through all obstacles and finds the greatest common divisor (self.shrinkFactor) in their coordinates.
@@ -118,7 +122,9 @@ class Agent(object):
                         if debugDisplay == 'discretize':
                             grid[x][y] = obstacleColor
                         self.reducedGrid[x][y] = obstacleColor
-        print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
+        if debugDisplay == 'discretize':
+            print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
+            print "yay! ", debugDisplay
 
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
@@ -132,20 +138,21 @@ class Agent(object):
 
         self.commands = []
         tank = self.mytanks[0]
-        if len(self.tankpath) == 0:
-            if tank.flag == '-':
-                print 'green'
-                self.tankpath = self.uniform_search(self.convert_to_grid_tuple(tank),
-                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]))
-            else:
-                print 'red'
-                self.tankpath = self.uniform_search(self.convert_to_grid_tuple(tank),
-                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'red'][0]))
-        if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until
-            print self.tankpath.pop()
 
-        draw_grid()
+        # if len(self.tankpath) == 0:
+        #     if tank.flag == '-':
+        #         self.tankpath = self.search(self.convert_to_grid_tuple(tank),
+        #             self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]))
+        #     else:
+        #         self.tankpath = self.search(self.convert_to_grid_tuple(tank),
+        #             self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'red'][0]))
+        # if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until
+        #     print self.tankpath.pop()
 
+        # draw_grid()
+        if time.time() - self.last > 1:
+            self.last = time.time()
+            print self.isFriendlyFire(tank)
         results = self.bzrc.do_commands(self.commands)
 
     def convert_to_grid_tuple(self, thing):
@@ -157,10 +164,24 @@ class Agent(object):
         x = (target[1] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         y = (target[0] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         # print math.sqrt((x - tank.x)**2 + (y - tank.y)**2), 'of', self.shrinkFactor / 2, '(', x, y, ')'
-        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor / 2:
+        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor * 1.8:
             return True
         self.move_to_position(tank, x, y)
         # print 'moving to ', x, y
+
+        # position = (int((tank.x + self.constants["worldoffset"]) / self.shrinkFactor), 
+        #     int((tank.y + self.constants["worldoffset"]) / self.shrinkFactor))
+        
+        # if math.sqrt((position[0] - target[1])**2 + (position[1] - target[0])**2) < 2:
+        #     return True
+
+        # target_angle = math.atan2(target[0] - position[1],
+        #                           target[1] - position[0])
+        # relative_angle = self.normalize_angle(target_angle - tank.angle)
+        # command = Command(tank.index, max(1 - (relative_angle) / (math.pi / 2), 0), 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
+        # self.commands.append(command)
+        # return False
+
         return False
 
     def move_to_position(self, tank, target_x, target_y):
@@ -168,8 +189,8 @@ class Agent(object):
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, abs((relative_angle * 3)**-1), 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
-        self.commands.append(command)
+        command = Command(tank.index, 1, 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
+        self.commands.append(command)#max(1 - abs(relative_angle) / (math.pi / 2), 0)
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
@@ -212,19 +233,46 @@ class Agent(object):
                             math.sqrt((curNode.x + cha[0] - goal[0]) ** 2 + (curNode.y + cha[1] - goal[1]) ** 2), curNode)
                         Visited[newVisit.x, newVisit.y] = newVisit
                         ToVisit.append(newVisit)
-        if debugDisplay != 'none':
-            print 'Path found in 1 /', int((time.time() - lastupdate)**-1), 'of a second!'
         if debugDisplay == 'discretize':
+            print 'Path found in 1 /', int((time.time() - lastupdate)**-1), 'of a second!'
             tempNode = curNode
             while tempNode.parent != None:
                 grid[tempNode.x][tempNode.y] = emptyColor
                 tempNode = tempNode.parent
             draw_grid()
+        return curNode
+
+    def search(self, start, goal):
+        curNode = self.uniform_search(start, goal)
         path = []
         while curNode != None:
             path.append((curNode.x, curNode.y))
             curNode = curNode.parent
-        return path
+        discpath = [] #This path contains only the corners, so that the tank can follow smoother straight lines
+        discpath.append(path[0])
+        for i in range(1, len(path) - 1):
+            if path[i][0] - path[i - 1][0] != path[i + 1][0] - path[i][0] or path[i][1] - path[i - 1][1] != path[i + 1][1] - path[i][1]:
+                discpath.append(path[i])
+        if debugDisplay == 'discretize':
+            for d in discpath:
+                grid[d[0]][d[1]] = obstacleColor
+            draw_grid()
+        print len(discpath)
+        return discpath
+
+    def isFriendlyFire(self, tank):
+        a = matrix((tank.x, tank.y))
+        n = matrix((float(self.constants["shotspeed"]) * math.cos(tank.angle), float(self.constants["shotspeed"]) * math.sin(tank.angle)))
+        n = n / LA.norm(n)
+        for mytank in [mytank for mytank in self.mytanks if mytank.index != tank.index]:
+            p = matrix((mytank.x, mytank.y))
+            shotdist = -((a - p).dot(n.transpose()))
+            linedistance = LA.norm((a - p) + shotdist * n)
+            if 0 <= shotdist < 100 and linedistance < 10:
+                return True
+        # (a - p) - ((a - p) dot n) n
+
+        return False
 
 class Node(object):
     def __init__(self, x, y, distance, heuristic, parent):
