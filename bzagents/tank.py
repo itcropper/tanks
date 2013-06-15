@@ -58,7 +58,7 @@ class Tank:
 		self.nextMu(dT, const)
 		self.nextSig(dT, const)
 
-   	def nextK(self, dT, const):
+	def nextK(self, dT, const):
 		Ht = np.transpose(self.H)
 		t = ((const)
 			*Ht

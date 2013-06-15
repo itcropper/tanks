@@ -3,6 +3,7 @@
 import sys
 import math
 import time
+from tank import Tank
 
 from bzrc import BZRC, Command
 import OpenGL
@@ -61,8 +62,20 @@ class Agent(object):
         self.obstacles = self.bzrc.get_obstacles()
         self.discretize()
         self.commands = []
+        self.ticker = 0
         self.tankpath = []
         self.last = time.time()
+        self.stay_away_from = []
+
+        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
+        self.mytanks = {tank.callsign : Tank(tank) for tank in mytanks}
+        self.enemies = {tank.callsign : Tank(tank) for tank in othertanks if tank.color != self.constants["team"]}
+
+        for tank in self.enemies.keys():
+            self.enemies[tank].setSigZ(3)
+            self.enemies[tank].set_world_size(self.constants["worldoffset"])
+
+        self.colored = []
 
     def discretize(self):
         """This function iterates through all obstacles and finds the greatest common divisor (self.shrinkFactor) in their coordinates.
@@ -80,8 +93,7 @@ class Agent(object):
         self.grid = []
         # Establish the width/height of the grid
         sidelength = int(self.constants["worldsize"]) / self.shrinkFactor
-        if debugDisplay == 'discretize':
-            init_window(sidelength, sidelength)
+        init_window(sidelength, sidelength)
 
         # Initialize the occgrid
         for y in range(sidelength):
@@ -105,18 +117,40 @@ class Agent(object):
         if debugDisplay == 'discretize':
             print "Grid reduced by a factor of", str(self.shrinkFactor) + "!"
 
+    def updateTanks(self):
+        pass
+
+
     def tick(self, time_diff):
         """Some time has passed; decide what to do next."""
-        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        self.mytanks = mytanks
-        self.othertanks = othertanks
-        self.flags = flags
-        self.shots = shots
-        self.enemies = [tank for tank in othertanks if tank.color !=
-                        self.constants['team']]
-
+        self.buddies, self.othertanks, self.flags, self.shots = self.bzrc.get_lots_o_stuff()
+        self.resetGrid()
         self.commands = []
-        tank = self.mytanks[0]
+        repulse_paths = []
+        if self.ticker % 1 == 0:
+            repulse_paths = self.get_bullet_repulsion()
+
+        # Let the program know what the current state of 
+        # the different tanks are, like position, speed, and angle.
+        for tank in self.buddies:
+            self.mytanks[tank.callsign].update(tank)
+        self.findRepulsionForShots(time_diff, repulse_paths)
+        self.ticker += 1
+        if self.ticker % 1 == 0:
+            self.kalmanStuff(time_diff, int(self.constants["worldsize"]) / 2)
+
+        # for tank in self.mytanks.keys():
+        #     self.decide(self.mytanks[tank])
+
+        results = self.bzrc.do_commands(self.commands)
+
+    def decide(self, tank):
+        """Decide upon an action to take, and take it"""
+        #print tank.flag
+        if tank.flag == '-' and (self.detectCarriers(tank) or self.detectEnemies(tank)):
+            # Returning a flag is top priority, so this code should only run if the tank holds no flag
+            return
+
         if len(self.tankpath) == 0:
             if tank.flag == '-':
                 self.tankpath = self.search(self.convert_to_grid_tuple(tank),
@@ -124,10 +158,20 @@ class Agent(object):
             else:
                 self.tankpath = self.search(self.convert_to_grid_tuple(tank),
                     self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'red'][0]))
-        if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until
+        if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until empty
             self.tankpath.pop()
 
-        results = self.bzrc.do_commands(self.commands)
+    def detectCarriers(self, tank):
+        pass
+
+    def detectEnemies(self, tank):
+        pass
+
+    def getVisibleEnemies(self, tank):
+        """Checks each enemy tank for visibility from the current tank"""
+        # for target in targets:
+
+        pass
 
     def convert_to_grid_tuple(self, thing):
         return (int((thing.y + self.constants["worldoffset"]) / self.shrinkFactor), int((thing.x + self.constants["worldoffset"]) / self.shrinkFactor))
@@ -247,6 +291,77 @@ class Agent(object):
 
         return False
 
+    def kalmanStuff(self, time_diff, worldSize):
+        tempTanks = {}
+
+        shootAt = (0,0)
+
+        for tank in self.othertanks:
+            # print tank.callsign
+            tempTanks[tank.callsign] = tank
+
+        for tank in self.mytanks.keys():
+            for enemy in self.enemies.keys():
+                try:
+                    self.enemies[enemy].update(tempTanks[enemy])
+                except KeyError:
+                    continue
+                #print self.enemies[enemy].x, self.enemies[enemy].y
+                self.enemies[enemy].update_kalman(time_diff)
+                place = self.enemies[enemy].get_target(time_diff, float(self.constants["shotspeed"]), self.mytanks[tank])
+                shootAt = place
+                self.draw_circle(self.enemies[enemy].x+ worldSize, self.enemies[enemy].y + worldSize, 6, .4)
+                self.draw_circle(shootAt[0]+ worldSize, shootAt[1] + worldSize, 3, .4)
+
+    
+            shoot = self.mytanks[tank].shoot(shootAt[0], shootAt[1])
+            self.commands.append(Command(shoot[0], shoot[1], shoot[2], shoot[3]))
+
+
+    def findRepulsionForShots(self, time_diff, repulse_paths):
+        for shot in repulse_paths:
+            #print "SHOT FIRED!"
+            for tank in self.buddies:
+                self.stay_away_from.insert(0, self.repel(shot(time_diff)[0], shot(time_diff)[1], tank.x, tank.y))
+                self.stay_away_from.pop()
+
+
+    def resetGrid(self):
+        draw_grid()
+        while len(self.colored) > 0:
+            coord = self.colored.pop()
+            grid[coord[0]][coord[1]] = 0
+
+    def draw_circle(self, x, y, radius, color):
+        for theta in drange(0, 2 * math.pi, 1.0 / (2 * radius * math.pi)):
+            newy = round(x + math.cos(theta) * radius)
+            newx = round(y + math.sin(theta) * radius)
+            if newx > 0 and newx < len(grid) and newy > 0 and newy < len(grid):
+                grid[newx][newy] = color
+                if (newx, newy) not in self.colored:
+                    self.colored.append((newx, newy))
+
+
+    def repel(self, targetx, targety, originx, originy, radius = 20, spread = 30):
+        theta = math.atan2(-(originy - targety), -(originx - targetx))
+        dist = math.sqrt((originy - targety)**2 + (originx - targetx)**2)
+        mag = (spread + radius - dist)/(radius + spread) * 400
+        if dist > radius + spread:
+            return 0, 0
+        elif dist < radius:
+            mag = 10000
+        return mag * math.cos(theta), mag * math.sin(theta)
+
+    def get_bullet_repulsion(self):
+
+        bulletPredictions = []
+
+        for shot in self.shots:
+            bulletPredictions.append(lambda deltaT : (shot.x + shot.vx *deltaT, shot.y + shot.vy * deltaT))
+
+        return bulletPredictions
+
+
 class Node(object):
     def __init__(self, x, y, distance, heuristic, parent):
         self.x = x
@@ -255,6 +370,12 @@ class Node(object):
         self.d = distance
         self.parent = parent
         self.visited = False
+
+def drange(start, stop, step):
+    r = start
+    while r < stop:
+        yield r
+        r += step
 
 def main():
     # Process CLI arguments.
