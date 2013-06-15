@@ -16,7 +16,7 @@ from OpenGL.GLU import *
 from fractions import gcd
 
 grid = None
-debugDisplay = ['', 'discretize', 'friendly', 'constants'][1]
+debugDisplay = ['', 'discretize', 'friendly', 'constants'][3]
 
 emptyColor = 0
 obstacleColor = 1
@@ -127,10 +127,6 @@ class Agent(object):
         if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until
             self.tankpath.pop()
 
-        # draw_grid()
-        # if time.time() - self.last > 1:
-        #     self.last = time.time()
-        #     print self.isFriendlyFire(tank)
         results = self.bzrc.do_commands(self.commands)
 
     def convert_to_grid_tuple(self, thing):
