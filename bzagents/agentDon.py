@@ -185,20 +185,6 @@ class Agent(object):
         if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor * 1.8:
             return True
         self.move_to_position(tank, x, y)
-        # print 'moving to ', x, y
-
-        # position = (int((tank.x + self.constants["worldoffset"]) / self.shrinkFactor), 
-        #     int((tank.y + self.constants["worldoffset"]) / self.shrinkFactor))
-        
-        # if math.sqrt((position[0] - target[1])**2 + (position[1] - target[0])**2) < 2:
-        #     return True
-
-        # target_angle = math.atan2(target[0] - position[1],
-        #                           target[1] - position[0])
-        # relative_angle = self.normalize_angle(target_angle - tank.angle)
-        # command = Command(tank.index, max(1 - (relative_angle) / (math.pi / 2), 0), 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
-        # self.commands.append(command)
-        # return False
 
         return False
 
@@ -323,7 +309,8 @@ class Agent(object):
             #print "SHOT FIRED!"
             for tank in self.buddies:
                 self.stay_away_from.insert(0, self.repel(shot(time_diff)[0], shot(time_diff)[1], tank.x, tank.y))
-                self.stay_away_from.pop()
+                if len(self.stay_away_from) > 200:
+                    self.stay_away_from.pop()
 
 
     def resetGrid(self):
