@@ -8,6 +8,7 @@ class Tank:
 	def __init__(self, tank):
 		self.setTank(tank)
 		self.init_kalman()
+		self.path = []
 
 	def setTank(self, tank):
 		self.x = tank.x
@@ -94,8 +95,8 @@ class Tank:
 
 		shouldShoot = abs(self.angle - targetAngle) < angleTol
 
-		if shouldShoot:
-			print "SHOOT IT FOX!"
+		# if shouldShoot:
+			# print "SHOOT IT FOX!"
 		# self.normalize_angle(math.atan2(y - self.y, x - self.x)  - self.angle) * 2.0
 
 		return (self.index, 0, self.normalize_angle(math.atan2(y - self.y, x - self.x)  - self.angle) * 2.0, shouldShoot)
@@ -181,7 +182,7 @@ class Tank:
 						   [0],
 						   [0]])
 		self.ticker = 0
-		print "RESET"
+		# print "RESET"
 
 
 	def get_target(self, dT, shotSpeed, tank):

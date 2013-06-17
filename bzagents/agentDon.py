@@ -4,6 +4,7 @@ import sys
 import math
 import time
 from tank import Tank
+from random import random
 
 from bzrc import BZRC, Command
 import OpenGL
@@ -17,7 +18,7 @@ from OpenGL.GLU import *
 from fractions import gcd
 
 grid = None
-debugDisplay = ['', 'discretize', 'friendly', 'constants'][3]
+debugDisplay = ['', 'discretize', 'friendly', 'constants'][0]
 
 emptyColor = 0
 obstacleColor = 1
@@ -63,7 +64,6 @@ class Agent(object):
         self.discretize()
         self.commands = []
         self.ticker = 0
-        self.tankpath = []
         self.last = time.time()
         self.stay_away_from = []
 
@@ -135,43 +135,100 @@ class Agent(object):
         for tank in self.buddies:
             self.mytanks[tank.callsign].update(tank)
         self.findRepulsionForShots(time_diff, repulse_paths)
-        self.ticker += 1
-        if self.ticker % 1 == 0:
-            self.kalmanStuff(time_diff, int(self.constants["worldsize"]) / 2)
+        # self.ticker += 1
+        # if self.ticker % 1 == 0:
+        self.kalmanStuff(time_diff, int(self.constants["worldsize"]) / 2)
 
+        for tank in [self.mytanks[tankkey] for tankkey in self.mytanks.keys()]:
+            self.decide(time_diff, tank)
+            # def shootAt(self, time_diff, tankkey, enemykey):
         # for tank in self.mytanks.keys():
         #     self.decide(self.mytanks[tank])
 
         results = self.bzrc.do_commands(self.commands)
 
-    def decide(self, tank):
+    def decide(self, time_diff, tank):
         """Decide upon an action to take, and take it"""
         #print tank.flag
-        if tank.flag == '-' and (self.detectCarriers(tank) or self.detectEnemies(tank)):
+        if tank.flag == '-' and (self.detectCarriers(time_diff, tank) or self.detectEnemies(time_diff, tank)):
             # Returning a flag is top priority, so this code should only run if the tank holds no flag
             return
 
-        if len(self.tankpath) == 0:
+        if len(self.mytanks[tank.callsign].path) == 0:
             if tank.flag == '-':
-                self.tankpath = self.search(self.convert_to_grid_tuple(tank),
-                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'green'][0]))
+                flags = [flag for flag in self.bzrc.get_flags() if flag.color != self.constants["team"] and flag.poss_color != self.constants["team"]]
+                if len(flags) > 0:
+                    self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
+                        self.convert_to_grid_tuple(sorted(flags, key=lambda inflag: math.sqrt((inflag.x - tank.x)**2 + (inflag.y - tank.y)**2))[0]))
             else:
-                self.tankpath = self.search(self.convert_to_grid_tuple(tank),
-                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == 'red'][0]))
-        if self.move_to_tile(tank, self.tankpath[len(self.tankpath) - 1]):#!!! Detect nearest tile, move to that instead, cut list until empty
-            self.tankpath.pop()
+                print 'forcing recalc'
+                for mytank in [self.mytanks[tkey] for tkey in self.mytanks.keys() if self.mytanks[tkey].flag == '-']:
+                    mytank.path = []
+                self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
+                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == self.constants["team"]][0]))
+        if len(self.mytanks[tank.callsign].path) > 0 and self.move_to_tile(tank, self.mytanks[tank.callsign].path[- 1]):#!!! Detect nearest tile, move to that instead, cut list until empty
+            self.mytanks[tank.callsign].path.pop()
 
-    def detectCarriers(self, tank):
-        pass
+    # This function will mimic detectEnemies, but will only chase Flag Carriers.
+    def detectCarriers(self, time_diff, tank):
+        return False
 
-    def detectEnemies(self, tank):
-        pass
+    # This will use the occgrid to detect 'visible' tanks, then fire at them
+    def detectEnemies(self, time_diff, tank):
+        visenemies = self.getVisibleEnemies(tank)#[self.enemies[tankkey] for tankkey in self.enemies.keys() if math.sqrt((self.enemies[tankkey].x - tank.x)**2 + (self.enemies[tankkey].y - tank.y)**2) < 50]
+        if len(visenemies) > 0:
+            self.shootAt(time_diff, tank.callsign, sorted(visenemies, key=lambda enemy: math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2))[0].callsign)
+        else:
+            return False
+        return True
 
-    def getVisibleEnemies(self, tank):
+    def getVisibleEnemies(self, mytank):
         """Checks each enemy tank for visibility from the current tank"""
         # for target in targets:
+        visibleEnemies = []
+        for enemy in [self.enemies[tank] for tank in self.enemies.keys() if math.sqrt((self.enemies[tank].x - mytank.x)**2 + (self.enemies[tank].y - mytank.y)**2) < int(self.constants["shotrange"])]:
+            vis = self.isVisible(mytank, enemy)
+            # print vis, enemy.callsign
+            if vis:
+                visibleEnemies.append(enemy)
+        return visibleEnemies
 
-        pass
+    def isVisible(self, tank, enemy):
+        enemycoords = self.convert_to_grid_tuple(enemy)
+        if not (0 < enemycoords[0] < len(self.grid) and 0 < enemycoords[1] < len(self.grid)):
+            return False
+        for coord in self.bresenham_line(self.convert_to_grid_tuple(tank), enemycoords):
+            if self.grid[coord[0]][coord[1]] == obstacleColor:
+                return False
+        return True
+        
+
+    def bresenham_line(self, (x,y),(x2,y2)):
+        """Brensenham line algorithm"""
+        steep = 0
+        coords = []
+        dx = abs(x2 - x)
+        if (x2 - x) > 0: sx = 1
+        else: sx = -1
+        dy = abs(y2 - y)
+        if (y2 - y) > 0: sy = 1
+        else: sy = -1
+        if dy > dx:
+            steep = 1
+            x,y = y,x
+            dx,dy = dy,dx
+            sx,sy = sy,sx
+        d = (2 * dy) - dx
+        for i in range(0,dx):
+            if steep: coords.append((y,x))
+            else: coords.append((x,y))
+            while d >= 0:
+                y = y + sy
+                d = d - (2 * dx)
+            x = x + sx
+            d = d + (2 * dy)
+        coords.append((x2,y2))
+        return coords
 
     def convert_to_grid_tuple(self, thing):
         return (int((thing.y + self.constants["worldoffset"]) / self.shrinkFactor), int((thing.x + self.constants["worldoffset"]) / self.shrinkFactor))
@@ -182,7 +239,7 @@ class Agent(object):
         x = (target[1] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         y = (target[0] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         # print math.sqrt((x - tank.x)**2 + (y - tank.y)**2), 'of', self.shrinkFactor / 2, '(', x, y, ')'
-        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor * 1.8:
+        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor * math.sqrt(2) / 2:
             return True
         self.move_to_position(tank, x, y)
 
@@ -193,7 +250,7 @@ class Agent(object):
         target_angle = math.atan2(target_y - tank.y,
                                   target_x - tank.x)
         relative_angle = self.normalize_angle(target_angle - tank.angle)
-        command = Command(tank.index, 1, 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
+        command = Command(tank.index, max(1 - abs(relative_angle) / (math.pi / 2), 0), 2 * relative_angle, False)#math.sqrt((tank.x - target_x)**2 + (tank.y - target_y)**2) / 5
         self.commands.append(command)#max(1 - abs(relative_angle) / (math.pi / 2), 0)
 
     def normalize_angle(self, angle):
@@ -267,12 +324,12 @@ class Agent(object):
         a = matrix((tank.x, tank.y))
         n = matrix((float(self.constants["shotspeed"]) * math.cos(tank.angle), float(self.constants["shotspeed"]) * math.sin(tank.angle)))
         n = n / LA.norm(n)
-        for mytank in [mytank for mytank in self.mytanks if mytank.index != tank.index]:
+        for mytank in [self.mytanks[mytank] for mytank in self.mytanks.keys() if mytank != tank.callsign]:
             p = matrix((mytank.x, mytank.y))
             shotdist = -((a - p).dot(n.transpose()))
             linedistance = LA.norm((a - p) + shotdist * n)
             if (0 <= shotdist < float(self.constants["shotspeed"]) and 
-                linedistance < float(self.constants["tankradius"]) + float(self.constants["shotradius"]) + 2):
+                linedistance < float(self.constants["tankradius"]) + float(self.constants["shotradius"])):# + 2):
                 return True
 
         return False
@@ -296,13 +353,18 @@ class Agent(object):
                 self.enemies[enemy].update_kalman(time_diff)
                 place = self.enemies[enemy].get_target(time_diff, float(self.constants["shotspeed"]), self.mytanks[tank])
                 shootAt = place
-                self.draw_circle(self.enemies[enemy].x+ worldSize, self.enemies[enemy].y + worldSize, 6, .4)
-                self.draw_circle(shootAt[0]+ worldSize, shootAt[1] + worldSize, 3, .4)
+                # self.draw_circle(self.enemies[enemy].x+ worldSize, self.enemies[enemy].y + worldSize, 6, .4)
+                # self.draw_circle(shootAt[0]+ worldSize, shootAt[1] + worldSize, 3, .4)
 
     
-            shoot = self.mytanks[tank].shoot(shootAt[0], shootAt[1])
-            self.commands.append(Command(shoot[0], shoot[1], shoot[2], shoot[3]))
+            # shoot = self.mytanks[tank].shoot(shootAt[0], shootAt[1])
+            # self.commands.append(Command(shoot[0], shoot[1], shoot[2], shoot[3]))
 
+    def shootAt(self, time_diff, tankkey, enemykey):
+        shootAt = self.enemies[enemykey].get_target(time_diff, float(self.constants["shotspeed"]), self.mytanks[tankkey])
+        shoot = self.mytanks[tankkey].shoot(shootAt[0], shootAt[1])
+
+        self.commands.append(Command(shoot[0], shoot[1], shoot[2], not self.isFriendlyFire(self.mytanks[tankkey]) and shoot[3]))
 
     def findRepulsionForShots(self, time_diff, repulse_paths):
         for shot in repulse_paths:
