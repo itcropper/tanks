@@ -33,7 +33,18 @@ class Tank:
 
 		self.ticker = 0
 
-		
+		self.hist = []
+
+	def historyCheck(self, position):
+		if len(self.hist) > 10:
+			self.hist.pop()
+			self.hist.insert(0, position)
+
+		if len(self.hist) >= 10 and self.hist[0] == self.hist[-1]:
+			print "Tank: " + str(self.callsign) + " is stuck"
+			return True
+		else:
+			return False
 
 	def set_world_size(self, ws):
 		self.world_size = ws

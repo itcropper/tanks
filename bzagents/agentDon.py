@@ -134,7 +134,7 @@ class Agent(object):
         # the different tanks are, like position, speed, and angle.
         for tank in self.buddies:
             self.mytanks[tank.callsign].update(tank)
-        self.findRepulsionForShots(time_diff, repulse_paths)
+        # self.dodgeShots(time_diff, repulse_paths)
         # self.ticker += 1
         # if self.ticker % 1 == 0:
         self.kalmanStuff(time_diff, int(self.constants["worldsize"]) / 2)
@@ -146,32 +146,44 @@ class Agent(object):
         #     self.decide(self.mytanks[tank])
 
         results = self.bzrc.do_commands(self.commands)
-
+    
+    def travel_to_adjacent_cell(self, tank):
+        adjCells = [(x, y) for x in range (-1, 2) for y in range(-1, 2) if (x, y) != (0, 0) and grid[x][y] != obstacleColor]
+        nextCell = random.randInt(0, len(adjCells) - 1)
+        self.move_to_tile(tank, (nextCell[1], nextCell[0]))
+    
     def decide(self, time_diff, tank):
         """Decide upon an action to take, and take it"""
         #print tank.flag
-        if tank.flag == '-' and (self.detectCarriers(time_diff, tank) or self.detectEnemies(time_diff, tank)):
-            # Returning a flag is top priority, so this code should only run if the tank holds no flag
-            return
+        if not self.dodgeShots(tank):
+            if tank.flag == '-' and (self.detectCarriers(time_diff, tank) or self.detectEnemies(time_diff, tank)):
+                # Returning a flag is top priority, so this code should only run if the tank holds no flag
+                return
 
-        if len(self.mytanks[tank.callsign].path) == 0:
-            if tank.flag == '-':
-                flags = [flag for flag in self.bzrc.get_flags() if flag.color != self.constants["team"] and flag.poss_color != self.constants["team"]]
-                if len(flags) > 0:
-                    self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
-                        self.convert_to_grid_tuple(sorted(flags, key=lambda inflag: math.sqrt((inflag.x - tank.x)**2 + (inflag.y - tank.y)**2))[0]))
+            isStuck = self.mytanks[tank.callsign].historyCheck((tank.x, tank.y, tank.angle))
+            if isStuck:
+                try:
+                    self.travel_to_adjacent_cell(self.mytanks[callsign])
+                except:
+                    return
             else:
-                print 'forcing recalc'
-                for mytank in [self.mytanks[tkey] for tkey in self.mytanks.keys() if self.mytanks[tkey].flag == '-']:
-                    mytank.path = []
-                self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
-                    self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == self.constants["team"]][0]))
-        if len(self.mytanks[tank.callsign].path) > 0 and self.move_to_tile(tank, self.mytanks[tank.callsign].path[- 1]):#!!! Detect nearest tile, move to that instead, cut list until empty
-            self.mytanks[tank.callsign].path.pop()
+                if len(self.mytanks[tank.callsign].path) == 0:
+                    if tank.flag == '-':
+                        flags = [flag for flag in self.bzrc.get_flags() if flag.color != self.constants["team"] and flag.poss_color != self.constants["team"]]
+                        if len(flags) > 0:
+                            self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
+                                self.convert_to_grid_tuple(sorted(flags, key=lambda inflag: math.sqrt((inflag.x - tank.x)**2 + (inflag.y - tank.y)**2))[0]))
+                    else:
+                        for mytank in [self.mytanks[tkey] for tkey in self.mytanks.keys() if self.mytanks[tkey].flag == '-']:
+                            mytank.path = []
+                        self.mytanks[tank.callsign].path = self.search(self.convert_to_grid_tuple(tank),
+                            self.convert_to_grid_tuple([flag for flag in self.bzrc.get_flags() if flag.color == self.constants["team"]][0]))
+                if len(self.mytanks[tank.callsign].path) > 0 and self.move_to_tile(tank, self.mytanks[tank.callsign].path[- 1]):#!!! Detect nearest tile, move to that instead, cut list until empty
+                    self.mytanks[tank.callsign].path.pop()
 
     # This function will mimic detectEnemies, but will only chase Flag Carriers.
     def detectCarriers(self, time_diff, tank):
-        visenemies = [tank for tank in self.getVisibleEnemies(tank) if tank.flag != '-']
+        visenemies = [enemy for enemy in self.getVisibleEnemies(tank) if enemy.flag != '-']
         if len(visenemies) > 0:
             self.shootAt(time_diff, tank.callsign, sorted(visenemies, key=lambda enemy: math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2))[0].callsign)
             return True
@@ -369,13 +381,27 @@ class Agent(object):
 
         self.commands.append(Command(shoot[0], shoot[1], shoot[2], not self.isFriendlyFire(self.mytanks[tankkey]) and shoot[3]))
 
-    def findRepulsionForShots(self, time_diff, repulse_paths):
-        for shot in repulse_paths:
-            #print "SHOT FIRED!"
-            for tank in self.buddies:
-                self.stay_away_from.insert(0, self.repel(shot(time_diff)[0], shot(time_diff)[1], tank.x, tank.y))
-                if len(self.stay_away_from) > 200:
-                    self.stay_away_from.pop()
+    def dodgeShots(self, tank):
+        dist = float(self.constants["tankradius"]) + float(self.constants["shotradius"])
+        dodging = False
+        for shot in [myshot for myshot in self.shots if math.sqrt((myshot.x - tank.x)**2 + (myshot.y - tank.y)**2) > int(self.constants["shotspeed"]) / 2]:
+            a = matrix((shot.x, shot.y))
+            n = matrix((shot.vx, shot.vy))
+            n = n / LA.norm(n)
+            p = matrix((tank.x, tank.y))
+            shotdist = -((a - p).dot(n.transpose()))
+            linedistance = LA.norm((a - p) + shotdist * n)
+            if linedistance < dist:
+                target = matrix((0, 0)) - (a - p) + shotdist * n
+                target_angle = math.atan2(target.item(0, 1), target.item(0, 0))
+                relative_angle = self.normalize_angle(target_angle - tank.angle)
+                command = Command(tank.index, 1, 2 * relative_angle, False)
+                self.commands.append(command)
+
+                dodging = True
+
+        return dodging
+
 
 
     def resetGrid(self):
