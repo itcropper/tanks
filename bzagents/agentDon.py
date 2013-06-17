@@ -171,6 +171,10 @@ class Agent(object):
 
     # This function will mimic detectEnemies, but will only chase Flag Carriers.
     def detectCarriers(self, time_diff, tank):
+        visenemies = [tank for tank in self.getVisibleEnemies(tank) if tank.flag != '-']
+        if len(visenemies) > 0:
+            self.shootAt(time_diff, tank.callsign, sorted(visenemies, key=lambda enemy: math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2))[0].callsign)
+            return True
         return False
 
     # This will use the occgrid to detect 'visible' tanks, then fire at them
@@ -178,9 +182,8 @@ class Agent(object):
         visenemies = self.getVisibleEnemies(tank)#[self.enemies[tankkey] for tankkey in self.enemies.keys() if math.sqrt((self.enemies[tankkey].x - tank.x)**2 + (self.enemies[tankkey].y - tank.y)**2) < 50]
         if len(visenemies) > 0:
             self.shootAt(time_diff, tank.callsign, sorted(visenemies, key=lambda enemy: math.sqrt((enemy.x - tank.x)**2 + (enemy.y - tank.y)**2))[0].callsign)
-        else:
-            return False
-        return True
+            return True
+        return False
 
     def getVisibleEnemies(self, mytank):
         """Checks each enemy tank for visibility from the current tank"""
@@ -239,7 +242,7 @@ class Agent(object):
         x = (target[1] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         y = (target[0] + 0.5) * self.shrinkFactor - self.constants["worldoffset"]
         # print math.sqrt((x - tank.x)**2 + (y - tank.y)**2), 'of', self.shrinkFactor / 2, '(', x, y, ')'
-        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor * math.sqrt(2) / 2:
+        if math.sqrt((x - tank.x)**2 + (y - tank.y)**2) < self.shrinkFactor / 2:
             return True
         self.move_to_position(tank, x, y)
 
