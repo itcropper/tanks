@@ -377,7 +377,7 @@ class Agent(object):
 
     def shootAt(self, time_diff, tankkey, enemykey):
         shootAt = self.enemies[enemykey].get_target(time_diff, float(self.constants["shotspeed"]), self.mytanks[tankkey])
-        shoot = self.mytanks[tankkey].shoot(shootAt[0], shootAt[1])
+        shoot = self.mytanks[tankkey].shoot(shootAt[0], shootAt[1], self.getVisibleEnemies(self.mytanks[tankkey]))
 
         self.commands.append(Command(shoot[0], shoot[1], shoot[2], not self.isFriendlyFire(self.mytanks[tankkey]) and shoot[3]))
 

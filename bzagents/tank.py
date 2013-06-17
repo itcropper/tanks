@@ -95,22 +95,24 @@ class Tank:
 		self.sigma = (np.identity(6) - self.nextK(dT, const) * self.H )* const
 
 
-	def shoot(self, x, y):
-		pointTheta = math.atan2(x, y)
-		
-		ang = math.sqrt((x - self.x)**2 + (y - self.y)**2)
+	def shoot(self, x, y, enemies):
+		shouldShoot = False
+		for enemy in enemies:
+			pointTheta = math.atan2(enemy.x, enemy.y)
 			
-		angleTol = math.sqrt(math.atan2(3, ang)) / 5
+			ang = math.sqrt((enemy.x - self.x)**2 + (enemy.y - self.y)**2)
+						
+			angleTol = math.sqrt(math.atan2(3, ang)) / 5
 
-		targetAngle = math.atan2(y - self.y, x - self.x)
+			targetAngle = math.atan2(enemy.y - self.y, enemy.x - self.x)
 
-		shouldShoot = abs(self.angle - targetAngle) < angleTol
-
+			if abs(self.angle - targetAngle) < angleTol:
+				shouldShoot = True
 		# if shouldShoot:
 			# print "SHOOT IT FOX!"
 		# self.normalize_angle(math.atan2(y - self.y, x - self.x)  - self.angle) * 2.0
 
-		return (self.index, 0, self.normalize_angle(math.atan2(y - self.y, x - self.x)  - self.angle) * 2.0, shouldShoot)
+		return (self.index, 1, self.normalize_angle(math.atan2(y - self.y, x - self.x)  - self.angle) * 2.0, shouldShoot)
 
 		
 
